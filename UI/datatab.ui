@@ -19,11 +19,85 @@
      <property name="orientation">
       <enum>Qt::Vertical</enum>
      </property>
-     <widget class="QTableView" name="dataTableView"/>
+     <widget class="QTableView" name="dataTableView">
+      <property name="contextMenuPolicy">
+       <enum>Qt::CustomContextMenu</enum>
+      </property>
+     </widget>
      <widget class="QTableView" name="statisticsTableView"/>
     </widget>
    </item>
   </layout>
+  <action name="actionCreate_Dataset">
+   <property name="text">
+    <string>Create Dataset</string>
+   </property>
+  </action>
+  <action name="actionSplit_Days">
+   <property name="text">
+    <string>Split Days</string>
+   </property>
+  </action>
+  <action name="actionChange_Color">
+   <property name="text">
+    <string>Change Color</string>
+   </property>
+  </action>
+  <action name="actionNew_Statistics_Row">
+   <property name="text">
+    <string>New Statistics Row</string>
+   </property>
+  </action>
+  <action name="actionSingle_Component_Cosinor">
+   <property name="text">
+    <string>Single Component Cosinor</string>
+   </property>
+  </action>
+  <action name="actionCompare_Cosinor_Sets">
+   <property name="text">
+    <string>Compare Cosinor Sets</string>
+   </property>
+  </action>
+  <action name="actionPlot_Data">
+   <property name="text">
+    <string>Plot Data</string>
+   </property>
+  </action>
+  <action name="actionHistogram">
+   <property name="text">
+    <string>Histogram</string>
+   </property>
+  </action>
+  <action name="actionShow_Options">
+   <property name="text">
+    <string>Show Options</string>
+   </property>
+  </action>
+  <action name="actionRankit">
+   <property name="text">
+    <string>Rankit</string>
+   </property>
+  </action>
+  <action name="actionRuns_Test">
+   <property name="text">
+    <string>Runs Test</string>
+   </property>
+  </action>
+  <action name="actionHenning_Smooth">
+   <property name="text">
+    <string>Henning Smooth</string>
+   </property>
+  </action>
+  <action name="actionExport_Data">
+   <property name="text">
+    <string>Export Data</string>
+   </property>
+  </action>
+  <action name="actionPlot_Mesor_and_CI">
+   <property name="text">
+    <string>Plot Mesor and CI</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

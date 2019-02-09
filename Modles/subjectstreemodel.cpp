@@ -131,11 +131,16 @@ Qt::ItemFlags SubjectsTreeModel::flags(const QModelIndex &index) const
 }
 
 
-bool SubjectsTreeModel::insertDataset(const CCSubject &subject, CCDataSetPtr newSet)
+bool SubjectsTreeModel::insertDataset(CCDataSetPtr newSet, bool isGroup)
 {
-    auto        parent = getModelIndex(dataBase->selectDataset(newSet->getParentId()),
-                                       subject.isGroup ? groupsItem : subjectsItem);
-    auto        parentItem = static_cast<SubjectsTreeItem*>(parent.internalPointer());
+    SubjectsTreeItem        *parentItem;
+    auto                    parent = getModelIndex( dataBase->selectDataset(newSet->getParentId()),
+                                                    isGroup ? groupsItem : subjectsItem);
+
+    if(!parent.isValid())
+        parent = createIndex(0, 0, isGroup ? groupsItem : subjectsItem);
+    parentItem = static_cast<SubjectsTreeItem*>(parent.internalPointer());
+
 
     beginInsertRows(parent, parentItem->children.count(), parentItem->children.count());
     parentItem->children.append(new SubjectsTreeItem(parentItem));
@@ -161,9 +166,6 @@ QModelIndex SubjectsTreeModel::getModelIndex(CCDataSetPtr search, SubjectsTreeIt
         return createIndex(0, 0, ptr);
 
     for(int i = 0; i < ptr->children.count(); i++) {
-        if(ptr->dataset->getDataId() != search->getDataId())
-            continue;
-
         QModelIndex     ret = getModelIndex(search, ptr->children[i]);
         if(ret.isValid())
             return ret;

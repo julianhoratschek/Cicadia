@@ -45,6 +45,10 @@ public:
     CCDataSet(int _id = 0, int _parentId = 0)
         :   suffix(""), color(QColor(StdColor)), data(nullptr), fromTime(0),
             toTime(0), id(_id), parentId(_parentId), dataId(0), type(RawData) {}
+    CCDataSet(const CCDataSet &other)
+        :   suffix(other.suffix), color(other.color), data(other.data), fromTime(other.fromTime),
+            toTime(other.toTime), id(0), parentId(other.id), dataId(other.dataId), type(DerivedData)
+            {}
     ~CCDataSet()
             { data.clear(); }
 
@@ -70,6 +74,8 @@ public:
                                     { return fromTime; }
     inline qint64               to() const
                                     { return toTime; }
+    inline void                 setId(int _id)
+                                    { id = _id; }
     inline int                  getId() const
                                     { return id; }
     inline int                  getParentId() const

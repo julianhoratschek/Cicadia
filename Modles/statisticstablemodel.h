@@ -5,7 +5,6 @@
 
 #include "../Algorithms/algorithmbase.h"
 
-#include <QTextStream>
 
 struct StatisticsTableItem {
     int                             dataTableColumn;

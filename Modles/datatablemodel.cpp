@@ -42,17 +42,23 @@ QVariant DataTableModel::data(const QModelIndex &index, int role) const
 
     auto        dataset = dataTable[index.column()];
 
-    if(role == Qt::DisplayRole) {
+    if(role == Qt::DisplayRole || role == KeyRole) {
         int         add = ((timeStart + index.row() * timeInterval) - dataset->from()) / timeInterval;
 
         if(add < 0 || dataset->from() + add * timeInterval > dataset->to())
             return "null";
-        return *(dataset->begin() + add);
+        return role == Qt::DisplayRole ? *(dataset->begin() + add) : (dataset->begin() + add).key();
     }
     else if(role == Qt::BackgroundRole)
         return dataset->getColor();
 
     return QVariant();
+}
+
+
+QSharedPointer<CCDataSet> DataTableModel::getDataset(int column) const
+{
+    return dataTable[column];
 }
 
 

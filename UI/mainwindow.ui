@@ -38,12 +38,28 @@
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
-          <widget class="QTreeView" name="subjectsTreeView"/>
-          <widget class="QTabWidget" name="addTabWidget">
+          <widget class="QTreeView" name="subjectsTreeView">
+           <property name="maximumSize">
+            <size>
+             <width>500</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="editTriggers">
+            <set>QAbstractItemView::EditKeyPressed</set>
+           </property>
+           <property name="selectionMode">
+            <enum>QAbstractItemView::NoSelection</enum>
+           </property>
+           <attribute name="headerVisible">
+            <bool>false</bool>
+           </attribute>
+          </widget>
+          <widget class="QTabWidget" name="tabWidget">
            <property name="currentIndex">
             <number>0</number>
            </property>
-           <widget class="QWidget" name="tab">
+           <widget class="QWidget" name="addTabWidget">
             <attribute name="title">
              <string>+</string>
             </attribute>
@@ -72,21 +88,23 @@
     </property>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
+    <addaction name="separator"/>
     <addaction name="actionImport"/>
+    <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuGraph">
     <property name="title">
      <string>Graph</string>
     </property>
-    <addaction name="actionExport"/>
+    <addaction name="actionExport_Graph"/>
     <addaction name="actionClear"/>
    </widget>
    <widget class="QMenu" name="menuTables">
     <property name="title">
      <string>Tables</string>
     </property>
-    <addaction name="actionExport_2"/>
+    <addaction name="actionExport_Tables"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuGraph"/>
@@ -121,9 +139,9 @@
     <string>Exit</string>
    </property>
   </action>
-  <action name="actionExport">
+  <action name="actionExport_Graph">
    <property name="text">
-    <string>Export</string>
+    <string>Export Graph</string>
    </property>
   </action>
   <action name="actionClear">
@@ -131,9 +149,17 @@
     <string>Clear</string>
    </property>
   </action>
-  <action name="actionExport_2">
+  <action name="actionExport_Tables">
    <property name="text">
-    <string>Export</string>
+    <string>Export Tables</string>
+   </property>
+   <property name="toolTip">
+    <string>Export Tables</string>
+   </property>
+  </action>
+  <action name="actionDelete_Dataset">
+   <property name="text">
+    <string>Delete Dataset</string>
    </property>
   </action>
  </widget>

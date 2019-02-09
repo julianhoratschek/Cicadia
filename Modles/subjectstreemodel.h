@@ -53,7 +53,7 @@ public:
     Qt::ItemFlags flags(const QModelIndex& index) const override;
 
     // Add data:
-    bool insertDataset(const CCSubject &subject, CCDataSetPtr newSet);
+    bool insertDataset(CCDataSetPtr newSet, bool isGroup = false);
 
     // Remove data:
     bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;

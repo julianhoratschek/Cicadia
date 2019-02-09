@@ -3,9 +3,9 @@
 
 #include "../database.h"
 
-#include <QDateTime>
-
 #include <QAbstractTableModel>
+
+#define KeyRole     0x0100
 
 class DataTableModel : public QAbstractTableModel
 {
@@ -22,6 +22,7 @@ public:
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
 
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    CCDataSetPtr getDataset(int column) const;
 
     // Add data:
     bool insertDataset(QSharedPointer<CCDataSet> dataset);

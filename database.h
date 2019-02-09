@@ -8,6 +8,11 @@
 
 #include <QVariant>
 
+#include <QFileInfo>
+#include <QTextStream>
+
+#include <QDateTime>
+
 
 struct CCSubject
 {
@@ -20,20 +25,28 @@ struct CCSubject
 };
 
 
+#define beginOperation          db.transaction()
+#define execOperation(x)        if(!q.exec()){ db.rollback(); return (x);}
+#define endOperation            db.commit()
+
+
 class CCDataBase
 {
 public:
     CCDataBase();
     ~CCDataBase();
 
-    QVector<CCSubject>      selectSubjects();
-    QVector<CCDataSetPtr>   selectDatasets(int subjectId);
-    CCDataSetPtr            selectDataset(int datasetId);
-    CCDataPtr               selectData(int dataId);
+    QSharedPointer<CCDataSet>       importFromFile(const QString &fileName);
 
-    int                     insertData(CCDataPtr data);
+    QVector<CCSubject>              selectSubjects();
+    QVector<CCDataSetPtr>           selectDatasets(int subjectId);
+    CCDataSetPtr                    selectDataset(int datasetId);
+    CCDataPtr                       selectData(int dataId);
 
-    int                     updateDataset(const CCDataSet &dataset);
+    CCDataSetPtr                    insertDataset(CCDataSetPtr dataset, int subjectId);
+    CCDataSetPtr                    insertData(CCDataPtr data, int parentId = 0, const QString &suffix = "Raw", const QColor &color = QColor(StdColor), CCDataSet::DataType type = CCDataSet::RawData);
+
+    int                             updateDataset(const CCDataSet &dataset);
 
 private:
     QSqlDatabase                    db;
@@ -41,7 +54,8 @@ private:
     QMap<int, CCDataSetPtr>         datasets;
     QMap<int, CCDataPtr>            data;
 
-    CCDataSetPtr            addDataset(const QSqlQuery &q);
+    CCDataSetPtr                    addDataset(const QSqlQuery &q);
+    QDateTime                       cleanTime(const QDateTime &dt) const;
 };
 
 #endif // DATABASE_H
