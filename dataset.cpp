@@ -1,6 +1,6 @@
 #include "dataset.h"
 
-DataSet::DataSet()
+CCDataSet::CCDataSet()
 {
 
 }

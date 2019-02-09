@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui sql
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -26,15 +26,47 @@ CONFIG += c++11
 
 SOURCES += \
         main.cpp \
-        mainwindow.cpp
+        UI/mainwindow.cpp \
+    UI/plotdialog.cpp \
+    UI/datatab.cpp \
+    UI/optionsdialog.cpp \
+    Modles/datatablemodel.cpp \
+    Modles/subjectstreemodel.cpp \
+    Modles/statisticstablemodel.cpp \
+    Algorithms/algorithmbase.cpp \
+    Algorithms/cosinor.cpp \
+    Algorithms/histogramm.cpp \
+    Algorithms/compare.cpp \
+    Algorithms/populationcosinor.cpp \
+    database.cpp \
+    dataset.cpp
 
 HEADERS += \
-        mainwindow.h
+        UI/mainwindow.h \
+    UI/plotdialog.h \
+    UI/datatab.h \
+    UI/optionsdialog.h \
+    Modles/datatablemodel.h \
+    Modles/subjectstreemodel.h \
+    Modles/statisticstablemodel.h \
+    Algorithms/algorithmbase.h \
+    Algorithms/cosinor.h \
+    Algorithms/histogramm.h \
+    Algorithms/compare.h \
+    Algorithms/populationcosinor.h \
+    database.h \
+    dataset.h
 
 FORMS += \
-        mainwindow.ui
+        UI/mainwindow.ui \
+    UI/plotdialog.ui \
+    UI/datatab.ui \
+    UI/optionsdialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+DISTFILES += \
+    notes

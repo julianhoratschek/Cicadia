@@ -1,14 +1,39 @@
 #ifndef STATISTICSTABLEMODEL_H
 #define STATISTICSTABLEMODEL_H
 
-#include <QAbstractTableModel>
+#include "datatablemodel.h"
+
+#include "../Algorithms/algorithmbase.h"
+
+#include <QTextStream>
+
+struct StatisticsTableItem {
+    int                             dataTableColumn;
+    QMap<QString, double>           display;
+    double                          alpha;
+    AlgorithmBase::AlgorithmType    type;
+
+    StatisticsTableItem()
+        : dataTableColumn(0), alpha(0.05), type(AlgorithmBase::SingleComponentCosinor) {}
+    StatisticsTableItem(const StatisticsTableItem &other)
+        : dataTableColumn(other.dataTableColumn), display(other.display), alpha(other.alpha), type(other.type) {}
+};
+
 
 class StatisticsTableModel : public QAbstractTableModel
 {
     Q_OBJECT
 
 public:
-    explicit StatisticsTableModel(QObject *parent = nullptr);
+
+#define StatisticsTableModel_ColumnCount        3
+    enum ColumnTypes {
+        AlphaColumn = 0,
+        NameColumn,
+        DataColumn
+    };
+
+    explicit StatisticsTableModel(QObject *parent = nullptr, DataTableModel *_dataTable = nullptr);
 
     // Header:
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
@@ -20,14 +45,15 @@ public:
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
     // Add data:
-    bool insertRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
-    bool insertColumns(int column, int count, const QModelIndex &parent = QModelIndex()) override;
+    bool addItem(int dataTableColumn, AlgorithmBase::AlgorithmType type);
 
     // Remove data:
     bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
-    bool removeColumns(int column, int count, const QModelIndex &parent = QModelIndex()) override;
 
 private:
+    DataTableModel                      *dataTable;
+    QVector<StatisticsTableItem>        items;
 };
+
 
 #endif // STATISTICSTABLEMODEL_H

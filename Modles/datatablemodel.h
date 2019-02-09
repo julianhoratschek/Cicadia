@@ -1,6 +1,10 @@
 #ifndef DATATABLEMODEL_H
 #define DATATABLEMODEL_H
 
+#include "../database.h"
+
+#include <QDateTime>
+
 #include <QAbstractTableModel>
 
 class DataTableModel : public QAbstractTableModel
@@ -8,7 +12,7 @@ class DataTableModel : public QAbstractTableModel
     Q_OBJECT
 
 public:
-    explicit DataTableModel(QObject *parent = nullptr);
+    explicit DataTableModel(QObject *parent = nullptr, CCDataBase *_dataBase = nullptr);
 
     // Header:
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
@@ -20,14 +24,16 @@ public:
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
     // Add data:
-    bool insertRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
-    bool insertColumns(int column, int count, const QModelIndex &parent = QModelIndex()) override;
+    bool insertDataset(QSharedPointer<CCDataSet> dataset);
 
     // Remove data:
-    bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
-    bool removeColumns(int column, int count, const QModelIndex &parent = QModelIndex()) override;
+    bool removeDataset(int column);
 
 private:
+    CCDataBase                  *dataBase;
+    QVector<CCDataSetPtr>       dataTable;
+    qint64                      timeStart, timeInterval;
+    int                         rows;
 };
 
 #endif // DATATABLEMODEL_H
