@@ -31,9 +31,10 @@ public:
     };
 
     explicit SubjectsTreeModel(QObject *parent = nullptr, CCDataBase *_dataBase = nullptr);
+    ~SubjectsTreeModel() override;
 
     // Header:
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation, int role = Qt::DisplayRole) const override;
 
     // Basic functionality:
     QModelIndex index(int row, int column,
@@ -52,11 +53,13 @@ public:
 
     Qt::ItemFlags flags(const QModelIndex& index) const override;
 
-    // Add data:
-    bool insertDataset(CCDataSetPtr newSet, bool isGroup = false);
-
     // Remove data:
     bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
+
+
+public slots:
+    // Add data:
+    void insertDataset(CCDataSetPtr newSet);
 
 private:
     SubjectsTreeItem            *root;

@@ -6,9 +6,76 @@ PlotDialog::PlotDialog(QWidget *parent) :
     ui(new Ui::PlotDialog)
 {
     ui->setupUi(this);
+
+    QSharedPointer<QCPAxisTicker>           XLabel(new QCPAxisTicker);
+    QSharedPointer<QCPAxisTicker>           YLabel(new QCPAxisTicker);
+
+    ui->customPlot->setLocale(QLocale(QLocale::English, QLocale::UnitedKingdom));
+
+    XLabel->setTickCount(24);
+    XLabel->setTickStepStrategy(QCPAxisTicker::tssReadability);
+    ui->customPlot->xAxis->setTicker(XLabel);
+
+    YLabel->setTickCount(15);
+    YLabel->setTickStepStrategy(QCPAxisTicker::tssReadability);
+    ui->customPlot->yAxis->setTicker(YLabel);
+
+    ui->customPlot->xAxis->setLabel("X");
+    ui->customPlot->yAxis->setLabel("Y");      //TODO: Different labels?
+
+    /*ui->customPlot->setInteraction(QCP::iSelectPlottables, true);
+    ui->customPlot->setInteraction(QCP::iMultiSelect, true);
+    ui->customPlot->setSelectionRectMode(QCP::srmSelect);*/
+
+    ui->customPlot->setInteraction(QCP::iRangeDrag, true);
+    ui->customPlot->setInteraction(QCP::iRangeZoom, true);
+    ui->customPlot->axisRect()->setRangeZoomAxes(ui->customPlot->xAxis, nullptr);
+
+    ui->customPlot->legend->setVisible(false);
+
+    connect(ui->customPlot, &QCustomPlot::mouseWheel, this, &PlotDialog::oncustomPlot_MouseWheel);
+    connect(ui->customPlot, &QCustomPlot::mousePress, this, &PlotDialog::oncustomPlot_MousePress);
+}
+
+
+PlotDialog::PlotDialog(QWidget *parent, const Histogram &h)
+    : PlotDialog(parent)
+{
+    CCDataPtr       data = h.getData();
+    QCPBars         *myBars = new QCPBars(ui->customPlot->xAxis, ui->customPlot->yAxis);
+
+    myBars->setData(data->keys(), data->values());
+    if(h.stepWidth() != 0.0)
+        myBars->setWidth(h.stepWidth());
 }
 
 PlotDialog::~PlotDialog()
 {
     delete ui;
+}
+
+
+/*
+ *  On holding [SHIFT] one can zoom on Y-Axis, otherwise on X-Axis
+ */
+void PlotDialog::oncustomPlot_MouseWheel(QWheelEvent *event)
+{
+    if((event->modifiers() & Qt::ShiftModifier) == Qt::ShiftModifier )
+        ui->customPlot->axisRect()->setRangeZoomAxes(nullptr, ui->customPlot->yAxis);
+    else
+        ui->customPlot->axisRect()->setRangeZoomAxes(ui->customPlot->xAxis, nullptr);
+}
+
+
+/*
+ *  Holding [SHIFT] enables Selection-Mode
+ */
+void PlotDialog::oncustomPlot_MousePress(QMouseEvent *event)
+{
+    /*if((event->buttons() & Qt::LeftButton) == Qt::LeftButton) {
+        if((event->modifiers() & Qt::ShiftModifier) == Qt::ShiftModifier)
+            ui->customPlot->setSelectionRectMode(QCP::srmSelect);
+        else
+            ui->customPlot->setSelectionRectMode(QCP::srmNone);
+    }*/
 }

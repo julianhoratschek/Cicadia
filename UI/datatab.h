@@ -3,9 +3,15 @@
 
 #include "Modles/statisticstablemodel.h"
 
+#include "plotdialog.h"
+#include "optionsdialog.h"
+
+#include "../Algorithms/histogram.h"
+
 #include <QWidget>
 #include <QMenu>
 
+#include <QFileDialog>
 #include <QColorDialog>
 
 namespace Ui {
@@ -26,9 +32,13 @@ public:
     void addDataset(CCDataSetPtr dataset);
     CCDataSetPtr        columnSelectionToDataset(const QModelIndexList &column);
 
+    void save(QDataStream &stream);
+    quint32 load(QDataStream &stream);
+
 
 signals:
     void plotData(CCDataSetPtr dataset, const QModelIndexList &col);
+    void datasetInserted(CCDataSetPtr dataset);
 
 
 private slots:
@@ -39,6 +49,14 @@ private slots:
     void on_actionCreate_Dataset_triggered();
 
     void on_actionPlot_Data_triggered();
+
+    void on_actionExport_Data_triggered();
+
+    void on_actionShow_Options_triggered();
+
+    void on_actionSplit_Days_triggered();
+
+    void on_actionHistogram_triggered();
 
 private:
     Ui::DataTab                 *ui;

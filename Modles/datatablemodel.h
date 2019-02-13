@@ -3,9 +3,15 @@
 
 #include "../database.h"
 
+#include "../Algorithms/algorithmbase.h"
+
+#include <QDataStream>
+#include <QTextStream>
+
 #include <QAbstractTableModel>
 
 #define KeyRole     0x0100
+#define UsedRole    0x0200
 
 class DataTableModel : public QAbstractTableModel
 {
@@ -29,6 +35,9 @@ public:
 
     // Remove data:
     bool removeDataset(int column);
+
+    void save(QDataStream &stream);
+    void load(QDataStream &stream);
 
 private:
     CCDataBase                  *dataBase;

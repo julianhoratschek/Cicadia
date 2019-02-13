@@ -40,7 +40,7 @@ void DataTab::setDataTableModel(DataTableModel *model)
 
 void DataTab::addDataset(QSharedPointer<CCDataSet> dataset)
 {
-    if(dataTableModel)
+    if(dataset && dataTableModel)
         dataTableModel->insertDataset(dataset);
 }
 
@@ -51,8 +51,34 @@ QSharedPointer<CCDataSet> DataTab::columnSelectionToDataset(const QModelIndexLis
 
     ret->setRange(column.first().data(KeyRole).toLongLong(),
                   column.last().data(KeyRole).toLongLong());
+    ret->setSuffix("Derived");
 
     return ret;
+}
+
+
+void DataTab::save(QDataStream &stream)
+{
+    stream << CCSerialization::CCSDataTab;
+
+    dataTableModel->save(stream);
+    statisticsTableModel->save(stream);
+}
+
+quint32 DataTab::load(QDataStream &stream)
+{
+    quint32     s;
+
+    stream >> s;
+    while(!stream.atEnd() && (s == CCSerialization::CCSDataTableModel || s == CCSerialization::CCSStatisticsTableModel)) {
+        if( s == CCSerialization::CCSDataTableModel)
+            dataTableModel->load(stream);
+        else
+            statisticsTableModel->load(stream);
+        stream >> s;
+    }
+
+    return s;
 }
 
 
@@ -74,7 +100,9 @@ void DataTab::on_dataTableView_customContextMenuRequested(const QPoint &pos)
 
     dataMenu = contextMenu.addMenu("Data Manipulation");
         dataMenu->addAction(ui->actionCreate_Dataset);
+        dataMenu->addAction(ui->actionSplit_Days);
         dataMenu->addAction(ui->actionChange_Color);
+        dataMenu->addAction(ui->actionExport_Data);
     plotMenu = contextMenu.addMenu("Plots");
         plotMenu->addAction(ui->actionPlot_Data);
 
@@ -105,7 +133,8 @@ void DataTab::on_actionCreate_Dataset_triggered()
     for(auto col: sorted) {
         auto            dataset = columnSelectionToDataset(col.values());
 
-        dataTableModel->insertDataset(dataBase->insertDataset(dataset, dataset->getDataId()););
+        if(dataTableModel->insertDataset(dataBase->insertDataset(dataset, dataset->getDataId())))
+            emit datasetInserted(dataset);
     }
 }
 
@@ -121,7 +150,7 @@ SortedModelIndexes DataTab::sortSelectedModelIndexesByColumns() const // OPTIMIZ
 
     // Pre-sort selected Indexes by Column
     for(int i = 0; i < list.count(); i++) {
-        if(list[i].data() != "null")
+        if(list[i].data(UsedRole).toBool())
             sorted[list[i].column()][list[i].row()] = list[i];
     }
 
@@ -134,4 +163,54 @@ void DataTab::on_actionPlot_Data_triggered()
 
     for(auto col: sorted)
         emit plotData(dataTableModel->getDataset(col.first().column()), col.values());
+}
+
+void DataTab::on_actionExport_Data_triggered()
+{
+    QString         fileName = QFileDialog::getSaveFileName(this, "Export to CSV", ".", "*.csv");
+    QFile           fl(fileName);
+    QTextStream     stream(&fl);
+    auto            sorted = sortSelectedModelIndexesByColumns();
+
+    fl.open(QIODevice::WriteOnly | QIODevice::Text);
+
+    stream << "Time;Temp°C" << endl;
+    for(auto col: sorted)
+        for(auto row: col)
+            stream << row.data(KeyRole).toLongLong() << ";" << row.data(Qt::DisplayRole).toDouble() << endl;
+
+    fl.close();
+}
+
+void DataTab::on_actionShow_Options_triggered()
+{
+    OptionsDialog           diag;
+
+    diag.exec();
+}
+
+void DataTab::on_actionSplit_Days_triggered()
+{
+    auto            sorted = sortSelectedModelIndexesByColumns();
+
+    for(auto col: sorted) {
+        for(quint64 dtFrom = col.first().data(KeyRole).toLongLong(), dtTo = dtFrom + SecsInDay;
+            dtTo < col.last().data(KeyRole).toLongLong(); dtTo += SecsInDay) {
+                CCDataSetPtr        dataset(new CCDataSet(*dataTableModel->getDataset(col.first().column())));
+                dataset->setRange(dtFrom, dtTo);
+                dtFrom = dtTo;
+
+                dataTableModel->insertDataset(dataBase->insertDataset(dataset, dataset->getDataId()));
+        }
+    }
+}
+
+void DataTab::on_actionHistogram_triggered()
+{
+    auto            sorted = sortSelectedModelIndexesByColumns();
+
+    Histogram       h(*columnSelectionToDataset(sorted.first().values()), 5);
+    PlotDialog      pd(this, h);
+
+    pd.exec();
 }

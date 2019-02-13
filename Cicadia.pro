@@ -6,7 +6,7 @@
 
 QT       += core gui sql svg
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport
 
 TARGET = Cicadia
 TEMPLATE = app
@@ -22,7 +22,9 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-CONFIG += c++11
+PRECOMPILED_HEADER = precomp.h
+
+CONFIG += c++11 precompile_header
 
 SOURCES += \
         main.cpp \
@@ -35,11 +37,12 @@ SOURCES += \
     Modles/statisticstablemodel.cpp \
     Algorithms/algorithmbase.cpp \
     Algorithms/cosinor.cpp \
-    Algorithms/histogramm.cpp \
     Algorithms/compare.cpp \
     Algorithms/populationcosinor.cpp \
     database.cpp \
-    dataset.cpp
+    dataset.cpp \
+    UI/qcustomplot.cpp \
+    Algorithms/histogram.cpp
 
 HEADERS += \
         UI/mainwindow.h \
@@ -51,11 +54,13 @@ HEADERS += \
     Modles/statisticstablemodel.h \
     Algorithms/algorithmbase.h \
     Algorithms/cosinor.h \
-    Algorithms/histogramm.h \
     Algorithms/compare.h \
     Algorithms/populationcosinor.h \
     database.h \
-    dataset.h
+    dataset.h \
+    UI/qcustomplot.h \
+    precomp.h \
+    Algorithms/histogram.h
 
 FORMS += \
         UI/mainwindow.ui \

@@ -8,10 +8,13 @@
 
 #include <QVariant>
 
+#include <QDir>
 #include <QFileInfo>
 #include <QTextStream>
 
 #include <QDateTime>
+
+#include <QDebug>
 
 
 struct CCSubject
@@ -22,6 +25,8 @@ struct CCSubject
 
     CCSubject(int _id = 0, const QString &_name = "", bool _group = false)
         :id(_id), name(_name), isGroup(_group) {}
+    CCSubject(const CCSubject &other)
+        : id(other.id), name(other.name), isGroup(other.isGroup) {}
 };
 
 
@@ -39,6 +44,7 @@ public:
     QSharedPointer<CCDataSet>       importFromFile(const QString &fileName);
 
     QVector<CCSubject>              selectSubjects();
+    CCSubject                       selectSubject(int subjectId);
     QVector<CCDataSetPtr>           selectDatasets(int subjectId);
     CCDataSetPtr                    selectDataset(int datasetId);
     CCDataPtr                       selectData(int dataId);
@@ -48,11 +54,16 @@ public:
 
     int                             updateDataset(const CCDataSet &dataset);
 
+    void                            hideData(CCDataSetPtr dataset, qint64 start, qint64 end);
+
+    void save(const QString &fileName);
+    void load(const QString &fileName);
+
 private:
     QSqlDatabase                    db;
 
     QMap<int, CCDataSetPtr>         datasets;
-    QMap<int, CCDataPtr>            data;
+    QMap<int, CCDataPtr>            dataContainer;
 
     CCDataSetPtr                    addDataset(const QSqlQuery &q);
     QDateTime                       cleanTime(const QDateTime &dt) const;

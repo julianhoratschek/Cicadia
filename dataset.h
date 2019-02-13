@@ -13,20 +13,36 @@
 #define EMatrix3ld      Eigen::Matrix<QCDDouble, 3, 3>
 #define EVector3ld      Eigen::Matrix<QCDDouble, 3, 1>
 
-#define MSecsInDay     86400
+#define SecsInDay      86400
 #define SecsIn10Min    600
+
+struct CCDataPoint {
+    double          value;
+    bool            used;
+
+    CCDataPoint(double v = 0, bool u = true)
+        : value(v), used(u) {}
+};
+
+//Q_DECLARE_METATYPE(CCDataPoint);
 
 struct CCData {
     int                         interval;
     QString                     name;
-    QMap<qint64, double>        internal;
+    QMap<qint64, CCDataPoint>   internal;
 
     CCData(const QString &_name)
         :interval(SecsIn10Min), name(_name) {}
+
+    inline void insert(qint64 t, double v, bool u = true) { internal.insert(t, CCDataPoint(v, u)); }
+    inline double &at(qint64 t) { return internal[t].value; }
+    inline bool &used(qint64 t) { return internal[t].used; }
+    inline QVector<qint64> keys() { return internal.keys().toVector(); }
+    inline QVector<double> values() { QVector<double> ret(internal.size()); for(int i=0;i<internal.size();i++) ret[i] = internal[i].value; return ret; }
 };
 
 #define CCDataPtr         QSharedPointer<CCData>
-#define CCDataIterator    QMap<qint64, double>::iterator
+#define CCDataIterator    QMap<qint64, CCDataPoint>::iterator
 
 #define StdColor        4279941833
 
@@ -43,10 +59,10 @@ public:
     };
 
     CCDataSet(int _id = 0, int _parentId = 0)
-        :   suffix(""), color(QColor(StdColor)), data(nullptr), fromTime(0),
+        :   QObject(), suffix(""), color(QColor(StdColor)), data(nullptr), fromTime(0),
             toTime(0), id(_id), parentId(_parentId), dataId(0), type(RawData) {}
     CCDataSet(const CCDataSet &other)
-        :   suffix(other.suffix), color(other.color), data(other.data), fromTime(other.fromTime),
+        :   QObject(), suffix(other.suffix), color(other.color), data(other.data), fromTime(other.fromTime),
             toTime(other.toTime), id(0), parentId(other.id), dataId(other.dataId), type(DerivedData)
             {}
     ~CCDataSet()

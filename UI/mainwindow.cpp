@@ -7,7 +7,9 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    subjectsTreeModel = new SubjectsTreeModel(this, &dataBase);
+    dataBase = new CCDataBase();
+
+    subjectsTreeModel = new SubjectsTreeModel(this, dataBase);
     ui->subjectsTreeView->setModel(subjectsTreeModel);
     ui->subjectsTreeView->setColumnHidden(SubjectsTreeModel::IDColumn, true);
     ui->subjectsTreeView->setColumnHidden(SubjectsTreeModel::TypeColumn, true);
@@ -57,6 +59,7 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete subjectsTreeModel;
+    delete dataBase;
     delete ui;
 }
 
@@ -64,13 +67,14 @@ MainWindow::~MainWindow()
  *      Adds new DataTab to TabView
  */
 void MainWindow::insertDataTab(int index) {
-    auto                *tab = new DataTab(this);
-    auto                *model = new DataTableModel(this, &dataBase);
+    auto                *tab = new DataTab(this, dataBase);
+    auto                *model = new DataTableModel(this, dataBase);
 
     tab->setDataTableModel(model);
     ui->tabWidget->insertTab(index, tab, "Dataset");
 
     connect(tab, &DataTab::plotData, this, &MainWindow::plotData);
+    connect(tab, &DataTab::datasetInserted, subjectsTreeModel, &SubjectsTreeModel::insertDataset);
 
     /*connect(tab, &DataTab::dataSetInserted, this, &MainWindow::ondataTab_dataSetInserted);
 
@@ -86,8 +90,7 @@ void MainWindow::insertDataTab(int index) {
 void MainWindow::plotData(CCDataSetPtr dataset, const QModelIndexList &list)
 {
     QPen                    pen;
-    QVector<qint64>         keys;
-    QVector<double>         values;
+    QVector<double>         keys, values;
 
     QDateTime               dt = QDateTime::fromSecsSinceEpoch(dataset->from());
     dt.setTime(QTime::fromMSecsSinceStartOfDay(0));
@@ -98,7 +101,7 @@ void MainWindow::plotData(CCDataSetPtr dataset, const QModelIndexList &list)
     pen.setColor(dataset->getColor());
     ui->customPlot->graph()->setPen(pen);
 
-    ui->customPlot->graph()->setSelectable(QCP::stWhole);
+    ui->customPlot->graph()->setSelectable(QCP::stDataRange);
 
     for(auto it: list) {
         keys << it.data(KeyRole).toLongLong() - dt.toSecsSinceEpoch();
@@ -107,9 +110,30 @@ void MainWindow::plotData(CCDataSetPtr dataset, const QModelIndexList &list)
 
     ui->customPlot->graph()->setData(keys, values, false);
 
+    graphRelations.insert(ui->customPlot->graph(), dataset);
+
     ui->customPlot->rescaleAxes();
 
     ui->customPlot->replot();
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event)
+{
+    switch(event->key()) {
+    case Qt::Key_Delete:
+        for(auto graph: ui->customPlot->selectedGraphs()) {
+            for(auto range: graph->selection().dataRanges()) {
+                double      begin = graph->data()->at(range.begin())->key,
+                            end = graph->data()->at(range.end())->key;
+
+                dataBase->hideData(graphRelations[graph], begin, end);
+                graph->data()->remove(begin, end);
+            }
+        }
+        ui->customPlot->replot();
+    default:
+        QMainWindow::keyPressEvent(event);
+    }
 }
 
 
@@ -198,14 +222,19 @@ void MainWindow::on_actionImport_triggered()
 {
     QStringList         fileNames = QFileDialog::getOpenFileNames(this, "Import Files", ".", "*.csv");
 
-    for(auto s: fileNames)
-        subjectsTreeModel->insertDataset(dataBase.importFromFile(s));
+    for(auto s: fileNames) {
+        auto        dataset = dataBase->importFromFile(s);
+        if(!dataset)
+            QMessageBox::warning(this, "Error", "Could not load File " + s);
+        else
+            subjectsTreeModel->insertDataset(dataset);
+    }
 }
 
 
 void MainWindow::on_actionExit_triggered()
 {
-    this->close();
+    close();
 }
 
 void MainWindow::on_actionExport_Graph_triggered()
@@ -223,8 +252,57 @@ void MainWindow::on_actionExport_Graph_triggered()
     QMessageBox::information(this, "Success", "Plot was saved");
 }
 
-void MainWindow::on_actionClear_triggered()
+void MainWindow::on_actionClear_Graph_triggered()
 {
+    graphRelations.clear();
     ui->customPlot->clearGraphs();
     ui->customPlot->replot();
+}
+
+void MainWindow::on_actionSave_triggered()
+{
+    QString     fileName = QFileDialog::getSaveFileName(this, "Save to", ".", "*.db");
+    quint32     s = CCSerialization::CCSMagicNumber, v = CCSerialization::CCSVersion;
+
+    dataBase->save(fileName);
+
+    QFile       fl(fileName + ".dt");
+    fl.open(QIODevice::WriteOnly);
+    QDataStream stream(&fl);
+
+    stream << s << v << (quint32)ui->tabWidget->count();
+    for(int i = 0; i < ui->tabWidget->count(); i++)
+        qobject_cast<DataTab*>(ui->tabWidget->widget(i))->save(stream);
+
+    fl.close();
+}
+
+void MainWindow::on_actionOpen_triggered()
+{
+    QString     fileName = QFileDialog::getOpenFileName(this, "Open File", ".", "*.db");
+    quint32     s, v;
+
+    dataBase->load(fileName);
+
+    QFile       fl(fileName + ".dt");
+    fl.open(QIODevice::ReadOnly);
+    QDataStream stream(&fl);
+
+    stream >> s;
+    stream >> v;
+
+    if(s != CCSerialization::CCSMagicNumber || v > CCSerialization::CCSVersion) {
+        QMessageBox::warning(this, "Error", "File Type or Version wrong");
+        return;
+    }
+
+    stream >> s;
+
+    for(quint64 i = 0; i < s; i++) {
+        insertDataTab(ui->tabWidget->count() - 1);
+        stream >> v;
+        qobject_cast<DataTab*>(ui->tabWidget->widget(ui->tabWidget->count() - 1))->load(stream);
+    }
+
+    fl.close();
 }

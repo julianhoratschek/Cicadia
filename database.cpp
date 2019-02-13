@@ -4,21 +4,25 @@
 
 CCDataBase::CCDataBase()
 {
-    db = QSqlDatabase::addDatabase("SQLITE3");
-    db.setDatabaseName("cicadia.db");
+    QDir::setCurrent(QDir::homePath());
+
+    db = QSqlDatabase::addDatabase("QSQLITE");
+    db.setDatabaseName(QDir::currentPath() + "/cicadia.db");
     db.open();
 
-    db.exec("create table if not exists `Subject` (`ID` integer primary key, `Name` text)");
-    db.exec("create table if not exists `SubjectMeta` (`Subject_ID` integer, `First_Name` text, `Last_Name` text, `Gender` boolean, `Age` integer)");
-    db.exec("create table if not exists `GroupRelations` (`Group_ID` integer, `Subject_ID` integer)");
-    db.exec("create table if not exists `Data` (`ID` integer, `Time` datetime, `Value` real, `Used` boolean)");
-    db.exec("create table if not exists `Dataset` (`ID` integer primary key auto_increment, `Parent_ID` integer, `Data_ID` integer, `Start` datetime, `End` datetime, `Suffix` text, `Color` integer, `Type` integer)");
-    db.exec("create table if not exists `DatasetRelations` (`Subject_ID` integer, `Dataset_ID` integer)");
+    db.exec("create table if not exists `Subject` (`ID` INTEGER primary key, `Name` TEXT)");
+    db.exec("create table if not exists `SubjectMeta` (`Subject_ID` INTEGER, `First_Name` TEXT, `Last_Name` TEXT, `Gender` BOOLEAN, `Age` INTEGER)");
+    db.exec("create table if not exists `GroupRelations` (`Group_ID` INTEGER, `Subject_ID` INTEGER)");
+    db.exec("create table if not exists `Data` (`ID` INTEGER, `Time` DATETIME, `Value` REAL, `Used` BOOLEAN)");
+    db.exec("create table if not exists `Dataset` (`ID` INTEGER primary key, `Parent_ID` INTEGER, `Data_ID` INTEGER, `Start` DATETIME, `End` DATETIME, `Suffix` TEXT, `Color` INTEGER, `Type` INTEGER)");
+    db.exec("create table if not exists `DatasetRelations` (`Subject_ID` INTEGER, `Dataset_ID` INTEGER)");
 }
 
 
 CCDataBase::~CCDataBase()
 {
+    datasets.clear();
+    dataContainer.clear();
     db.close();
 }
 
@@ -64,8 +68,10 @@ CCDataSetPtr CCDataBase::importFromFile(const QString &fileName)
         //dt.setTimeSpec(Qt::UTC);
 
         // Circumvents Error in 1-Wire CSV-File
-        data->internal[dt.toSecsSinceEpoch()] = l.size() == 4 ? QString( l[2] + "." + l[3] ).toDouble() :
-                                                l[2].toDouble();
+        data->insert(dt.toSecsSinceEpoch(),
+                     l.size() == 4 ?
+                         QString( l[2] + "." + l[3] ).toDouble()
+                       : l[2].toDouble());
     }
 
     fl.close();
@@ -81,7 +87,7 @@ QVector<CCSubject> CCDataBase::selectSubjects()
     QVector<CCSubject>      ret;
     QSqlQuery               q(db);
 
-    q.prepare("select `ID`, `Name`, count(`Group_ID`) as `isGroup` from `Subject` join `GroupRelations` on `ID` = `Subject_ID` group by `Group_ID`");
+    q.prepare("select `ID`, `Name`, count(`Group_ID`) as `isGroup` from `Subject` left join `GroupRelations` on `ID` = `Subject_ID` group by `ID`");
     if(!q.exec())
         return {};
     while(q.next()) {
@@ -92,6 +98,18 @@ QVector<CCSubject> CCDataBase::selectSubjects()
     }
 
     return ret;
+}
+
+CCSubject CCDataBase::selectSubject(int subjectId)
+{
+    QSqlQuery               q(db);
+
+    q.prepare("select `ID`, `Name`, count(`Group_ID`) as `isGroup` from `Subject` left join `GroupRelations` on `ID` = `Subject_ID` where `ID` = ? group by `ID`");
+    q.addBindValue(subjectId);
+    if(!q.exec() || !q.next())
+        return {};
+
+    return CCSubject(q.value("ID").toInt(), q.value("Name").toString(), q.value("isGroup").toBool());
 }
 
 
@@ -130,8 +148,8 @@ QSharedPointer<CCDataSet> CCDataBase::selectDataset(int datasetId)
 
 QSharedPointer<CCData> CCDataBase::selectData(int dataId)
 {
-    if(data.contains(dataId))
-        return data[dataId];
+    if(dataContainer.contains(dataId))
+        return dataContainer[dataId];
 
     QSqlQuery               q(db);
 
@@ -147,15 +165,15 @@ QSharedPointer<CCData> CCDataBase::selectData(int dataId)
     if(!q.exec())
         return nullptr;
 
-    qint64      mean = 0;
-    while(q.next()) {
-        mean += q.value("Time").toLongLong();
-        if(q.value("Used").toBool())
-            dt->internal.insert(q.value("Time").toLongLong(), q.value("Value").toDouble());
-    }
 
-    dt->interval = mean / dt->internal.size();
-    data.insert(dataId, dt);
+    while(q.next())
+        dt->insert(q.value("Time").toLongLong(), q.value("Value").toDouble(), q.value("Used").toBool());
+
+    dt->interval = (dt->internal.lastKey() - dt->internal.firstKey()) / dt->internal.size();
+    int         diff = dt->interval % 10;
+    if(diff != 0)
+        dt->interval += diff > 5 ? 10 - diff : -diff;
+    dataContainer.insert(dataId, dt);
 
     return dt;
 }
@@ -173,7 +191,7 @@ QSharedPointer<CCDataSet> CCDataBase::insertDataset(QSharedPointer<CCDataSet> da
     q.addBindValue(dataset->from());
     q.addBindValue(dataset->to());
     q.addBindValue(dataset->getSuffix());
-    q.addBindValue(dataset->getColor());
+    q.addBindValue(dataset->getColor().rgb());
     q.addBindValue(dataset->getType());
     execOperation(nullptr)
 
@@ -192,17 +210,17 @@ QSharedPointer<CCDataSet> CCDataBase::insertDataset(QSharedPointer<CCDataSet> da
 
 QSharedPointer<CCDataSet> CCDataBase::insertData(QSharedPointer<CCData> data, int parentId, const QString &suffix, const QColor &color, CCDataSet::DataType type)
 {
-    QSqlQuery           q(db);
-
     beginOperation;
 
-    q.prepare("insert into `Dataset` (`Parent_ID`, `Data_ID`, `Start`, `End`, `Suffix`, `Color`, `Type`) values (?, `ID`, ?, ?, ?, ?, ?)");
-    q.addBindValue(parentId);
-    q.addBindValue(data->internal.firstKey());
-    q.addBindValue(data->internal.lastKey());
-    q.addBindValue(suffix);
-    q.addBindValue(color);
-    q.addBindValue(type);
+    QSqlQuery           q(db);
+
+    q.prepare("insert into `Dataset` (`Parent_ID`, `Start`, `End`, `Suffix`, `Color`, `Type`) values (:pid, :start, :end, :suffix, :color, :type)");
+    q.bindValue(":pid", parentId);
+    q.bindValue(":start", data->internal.firstKey());
+    q.bindValue(":end", data->internal.lastKey());
+    q.bindValue(":suffix", suffix);
+    q.bindValue(":color", color.rgb());
+    q.bindValue(":type", type);
     execOperation(nullptr)
 
     int                 id = q.lastInsertId().toInt();
@@ -221,9 +239,14 @@ QSharedPointer<CCDataSet> CCDataBase::insertData(QSharedPointer<CCData> data, in
         q.prepare("insert into `Data` (`ID`, `Time`, `Value`, `Used`) values (?, ?, ?, true)");
         q.addBindValue(id);
         q.addBindValue(it.key());
-        q.addBindValue(it.value());
-        execOperation(nullptr)
+        q.addBindValue(it.value().value);
+       execOperation(nullptr)
     }
+
+    q.prepare("update `Dataset` set `Data_ID` = ? where `ID` = ?");
+    q.addBindValue(id);
+    q.addBindValue(id);
+    execOperation(nullptr)
 
     endOperation;
 
@@ -243,6 +266,40 @@ int CCDataBase::updateDataset(const CCDataSet &dataset)
         return false;
 
     return true;
+}
+
+void CCDataBase::hideData(CCDataSetPtr dataset, qint64 start, qint64 end)
+{
+    QSqlQuery               q(db);
+
+    q.prepare("update `Data` set `Used` = false where `ID` = ? and `Start` >= ? and `End` <= ?");
+    q.addBindValue(dataset->getDataId());
+    q.addBindValue(start);
+    q.addBindValue(end);
+    q.exec();
+
+    if(dataContainer.contains(dataset->getDataId())) {
+        for(qint64 i = start; i <= end; i++)
+            dataContainer[dataset->getDataId()]->used(i) = false;
+    }
+}
+
+
+void CCDataBase::save(const QString &fileName)
+{
+    QFile::copy(db.hostName(), fileName);
+    load(fileName);
+}
+
+
+void CCDataBase::load(const QString &fileName)
+{
+    datasets.clear();
+    dataContainer.clear();
+
+    db.close();
+    db.setHostName(fileName);
+    db.open();
 }
 
 

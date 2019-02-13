@@ -1,6 +1,6 @@
 #include "statisticstablemodel.h"
 
-StatisticsTableModel::StatisticsTableModel(QObject *parent = nullptr, DataTableModel *_dataTable = nullptr)
+StatisticsTableModel::StatisticsTableModel(QObject *parent, DataTableModel *_dataTable)
     : QAbstractTableModel(parent), dataTable(_dataTable)
 {
 }
@@ -93,6 +93,58 @@ bool StatisticsTableModel::removeRows(int row, int count, const QModelIndex &par
     beginRemoveRows(parent, row, row + count - 1);
     items.remove(row);
     endRemoveRows();
+
+    return true;
+}
+
+void StatisticsTableModel::save(QDataStream &stream)
+{
+    stream << CCSerialization::CCSStatisticsTableModel;
+    stream << (quint32)items.count();
+
+    for(auto it: items)
+        it.save(stream);
+}
+
+quint32 StatisticsTableModel::load(QDataStream &stream)
+{
+    quint32             sz, tp;
+
+    items.clear();
+
+    stream >> sz;
+
+    for(quint32 i = 0; i < sz; i++) {
+        StatisticsTableItem it;
+
+        stream >> tp;
+        if(tp != CCSerialization::CCSStatisticsTableItem)
+            return tp;
+        it.load(stream);
+        items << it;
+    }
+
+    return 0;
 }
 
 
+
+void StatisticsTableItem::save(QDataStream &stream) const
+{
+    stream << CCSerialization::CCSStatisticsTableItem;
+    stream << dataTableColumn << alpha << (quint32)type << display;
+}
+
+void StatisticsTableItem::load(QDataStream &stream)
+{
+    quint32         tp;
+
+    display.clear();
+
+    stream >> dataTableColumn;
+    stream >> alpha;
+    stream >> tp;
+    stream >> display;
+
+    type = (AlgorithmBase::AlgorithmType)tp;
+}

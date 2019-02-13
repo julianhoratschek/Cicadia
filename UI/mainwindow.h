@@ -11,6 +11,8 @@
 
 #include <QPen>
 
+#include "UI/qcustomplot.h"
+
 namespace Ui {
 class MainWindow;
 }
@@ -21,12 +23,15 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
+    ~MainWindow() override;
 
     void insertDataTab(int index);
 
 public slots:
     void plotData(CCDataSetPtr dataset, const QModelIndexList &list);
+
+protected:
+    virtual void keyPressEvent(QKeyEvent *event) override;
 
 private slots:
     void on_actionImport_triggered();
@@ -46,12 +51,19 @@ private slots:
 
     void on_actionExport_Graph_triggered();
 
-    void on_actionClear_triggered();
+    void on_actionClear_Graph_triggered();
+
+    void on_actionSave_triggered();
+
+    void on_actionOpen_triggered();
+
+    void on_actionExport_Tables_triggered();
 
 private:
-    Ui::MainWindow          *ui;
-    SubjectsTreeModel       *subjectsTreeModel;
-    CCDataBase              dataBase;
+    Ui::MainWindow                  *ui;
+    SubjectsTreeModel               *subjectsTreeModel;
+    CCDataBase                      *dataBase;
+    QMap<QCPGraph*, CCDataSetPtr>   graphRelations;
 };
 
 #endif // MAINWINDOW_H

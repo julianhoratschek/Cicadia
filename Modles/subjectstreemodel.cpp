@@ -8,6 +8,9 @@ SubjectsTreeModel::SubjectsTreeModel(QObject *parent, CCDataBase *_dataBase)
     root->children.append(new SubjectsTreeItem(root));
     root->children.append(new SubjectsTreeItem(root));
 
+    subjectsItem->name = "Subjects";
+    groupsItem->name = "Groups";
+
     auto            subjects = dataBase->selectSubjects();
 
     for(auto subject: subjects) {
@@ -16,7 +19,7 @@ SubjectsTreeModel::SubjectsTreeModel(QObject *parent, CCDataBase *_dataBase)
                     newNode = new SubjectsTreeItem(node);
 
         newNode->dataset = datasets.first();
-        newNode->name = subject.name;
+        newNode->name = subject.name + "_" + datasets.first()->getSuffix();
         node->children.append(newNode);
 
         for(int i = 1; i < datasets.count(); i++) {
@@ -27,12 +30,21 @@ SubjectsTreeModel::SubjectsTreeModel(QObject *parent, CCDataBase *_dataBase)
     }
 }
 
+SubjectsTreeModel::~SubjectsTreeModel()
+{
+    delete root;
+}
 
-QVariant SubjectsTreeModel::headerData(int section, Qt::Orientation orientation, int role) const
+
+QVariant SubjectsTreeModel::headerData(int section, Qt::Orientation, int role) const
 {
     switch(section) {
     case NameColumn:
         return "Name";
+    case IDColumn:
+        return "ID";
+    case TypeColumn:
+        return "Type";
     }
     return QVariant();
 }
@@ -51,34 +63,46 @@ QVariant SubjectsTreeModel::headerData(int section, Qt::Orientation orientation,
 
 QModelIndex SubjectsTreeModel::index(int row, int column, const QModelIndex &parent) const
 {
-    auto        ptr = static_cast<SubjectsTreeItem*>(parent.internalPointer());
+    SubjectsTreeItem        *ptr;
 
-    return createIndex(row, column, ptr->children[row]);
+    if(!parent.isValid())
+        ptr = root;
+    else
+        ptr = static_cast<SubjectsTreeItem*>(parent.internalPointer());
+
+    if(row < ptr->children.count())
+        return createIndex(row, column, ptr->children[row]);
+    return QModelIndex();
 }
 
 
 QModelIndex SubjectsTreeModel::parent(const QModelIndex &index) const
 {
+    if(!index.isValid())
+        return QModelIndex();
+
     auto        ptr = static_cast<SubjectsTreeItem*>(index.internalPointer())->parent;
 
-    return createIndex(ptr->parent ? ptr->parent->children.indexOf(ptr) : 0, 0, ptr);
+    if(ptr != root)
+        return createIndex(ptr->parent->children.indexOf(ptr), 0, ptr);
+    return QModelIndex();
 }
 
 
 int SubjectsTreeModel::rowCount(const QModelIndex &parent) const
 {
+    SubjectsTreeItem    *ptr;
     if (!parent.isValid())
-        return 0;
+        ptr = root;
+    else
+        ptr = static_cast<SubjectsTreeItem*>(parent.internalPointer());
 
-    return static_cast<SubjectsTreeItem*>(parent.internalPointer())->children.count();
+    return ptr->children.count();
 }
 
 
 int SubjectsTreeModel::columnCount(const QModelIndex &parent) const
 {
-    if (!parent.isValid())
-        return 0;
-
     return SubjectsTreeModel_ColumnCount;
 }
 
@@ -101,6 +125,8 @@ QVariant SubjectsTreeModel::data(const QModelIndex &index, int role) const
             return ptr->dataset->getType();
         }
         break;
+    case Qt::BackgroundRole:
+        return ptr->dataset->getColor();
     }
 
     return QVariant();
@@ -131,24 +157,23 @@ Qt::ItemFlags SubjectsTreeModel::flags(const QModelIndex &index) const
 }
 
 
-bool SubjectsTreeModel::insertDataset(CCDataSetPtr newSet, bool isGroup)
+void SubjectsTreeModel::insertDataset(CCDataSetPtr newSet)
 {
     SubjectsTreeItem        *parentItem;
+    CCSubject               s = dataBase->selectSubject(newSet->getDataId());
     auto                    parent = getModelIndex( dataBase->selectDataset(newSet->getParentId()),
-                                                    isGroup ? groupsItem : subjectsItem);
+                                                    s.isGroup ? groupsItem : subjectsItem);
 
     if(!parent.isValid())
-        parent = createIndex(0, 0, isGroup ? groupsItem : subjectsItem);
+        parent = createIndex(0, 0, s.isGroup ? groupsItem : subjectsItem);
     parentItem = static_cast<SubjectsTreeItem*>(parent.internalPointer());
 
 
     beginInsertRows(parent, parentItem->children.count(), parentItem->children.count());
     parentItem->children.append(new SubjectsTreeItem(parentItem));
     parentItem->children.last()->dataset = newSet;
-    parentItem->children.last()->name = newSet->getName();
+    parentItem->children.last()->name = s.name + "_" + newSet->getSuffix();
     endInsertRows();
-
-    return true;
 }
 
 
@@ -157,6 +182,8 @@ bool SubjectsTreeModel::removeRows(int row, int count, const QModelIndex &parent
     beginRemoveRows(parent, row, row + count - 1);
     // FIXME: Implement me!
     endRemoveRows();
+
+    return true;
 }
 
 

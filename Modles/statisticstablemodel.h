@@ -3,8 +3,6 @@
 
 #include "datatablemodel.h"
 
-#include "../Algorithms/algorithmbase.h"
-
 
 struct StatisticsTableItem {
     int                             dataTableColumn;
@@ -16,6 +14,9 @@ struct StatisticsTableItem {
         : dataTableColumn(0), alpha(0.05), type(AlgorithmBase::SingleComponentCosinor) {}
     StatisticsTableItem(const StatisticsTableItem &other)
         : dataTableColumn(other.dataTableColumn), display(other.display), alpha(other.alpha), type(other.type) {}
+
+    void save(QDataStream &stream) const;
+    void load(QDataStream &stream);
 };
 
 
@@ -48,6 +49,9 @@ public:
 
     // Remove data:
     bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
+
+    void save(QDataStream &stream);
+    quint32 load(QDataStream &stream);
 
 private:
     DataTableModel                      *dataTable;
