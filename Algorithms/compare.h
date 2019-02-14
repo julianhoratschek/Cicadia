@@ -1,9 +1,9 @@
 #ifndef COMPARE_H
 #define COMPARE_H
 
-#include "algorithmbase.h"
+#include "../dataset.h"
 
-class Compare : public AlgorithmBase
+class Compare : public AlgorithmBase<CCDataPtr>
 {
 public:
     Compare();

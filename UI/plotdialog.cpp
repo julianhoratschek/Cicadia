@@ -41,12 +41,15 @@ PlotDialog::PlotDialog(QWidget *parent) :
 PlotDialog::PlotDialog(QWidget *parent, const Histogram &h)
     : PlotDialog(parent)
 {
-    CCDataPtr       data = h.getData();
-    QCPBars         *myBars = new QCPBars(ui->customPlot->xAxis, ui->customPlot->yAxis);
+    CCDoubleDataPtr         data = h.getData();
+    QCPBars                 *myBars = new QCPBars(ui->customPlot->xAxis, ui->customPlot->yAxis);
+    QVector<double>         k = data->keys(),
+                            d = data->values();
 
-    myBars->setData(data->keys(), data->values());
+    myBars->setData(k, d);
     if(h.stepWidth() != 0.0)
         myBars->setWidth(h.stepWidth());
+    ui->customPlot->rescaleAxes();
 }
 
 PlotDialog::~PlotDialog()

@@ -98,6 +98,11 @@
     <string>Plot Mesor and CI</string>
    </property>
   </action>
+  <action name="actionRemove_Dataset">
+   <property name="text">
+    <string>Remove Dataset</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

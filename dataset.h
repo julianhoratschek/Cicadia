@@ -1,6 +1,8 @@
 #ifndef DATASET_H
 #define DATASET_H
 
+#include "Algorithms/algorithmbase.h"
+
 #include    <QVector>
 #include    <QMap>
 
@@ -26,25 +28,35 @@ struct CCDataPoint {
 
 //Q_DECLARE_METATYPE(CCDataPoint);
 
+template<class Key>
 struct CCData {
     int                         interval;
     QString                     name;
-    QMap<qint64, CCDataPoint>   internal;
+    QMap<Key, CCDataPoint>      internal;
 
     CCData(const QString &_name)
         :interval(SecsIn10Min), name(_name) {}
 
-    inline void insert(qint64 t, double v, bool u = true) { internal.insert(t, CCDataPoint(v, u)); }
-    inline double &at(qint64 t) { return internal[t].value; }
-    inline bool &used(qint64 t) { return internal[t].used; }
-    inline QVector<qint64> keys() { return internal.keys().toVector(); }
-    inline QVector<double> values() { QVector<double> ret(internal.size()); for(int i=0;i<internal.size();i++) ret[i] = internal[i].value; return ret; }
+    inline void insert(Key t, double v, bool u = true) { internal.insert(t, CCDataPoint(v, u)); }
+    inline double &at(Key t) { return internal[t].value; }
+    inline bool &used(Key t) { return internal[t].used; }
+    inline QVector<Key> keys() { return internal.keys().toVector(); }
+    inline QVector<double> values() {
+        QVector<double> ret(internal.size());
+        int i = 0;
+        for(auto it: internal)
+            ret[i++] = it.value;
+        return ret;
+    }
 };
 
-#define CCDataPtr         QSharedPointer<CCData>
-#define CCDataIterator    QMap<qint64, CCDataPoint>::iterator
+#define CCDataPtr               QSharedPointer<CCData<qint64>>
+#define CCDataIterator          QMap<qint64, CCDataPoint>::iterator
+#define CCDoubleDataPtr         QSharedPointer<CCData<double>>
+#define CCDoubleDataIterator    QMap<double, CCDataPoint>::iterator
 
-#define StdColor        4279941833
+#define StdColor        0xff71b5ed
+#define UnusedColor     0xffbcc4d1
 
 class CCDataSet : public QObject
 {
@@ -60,20 +72,20 @@ public:
 
     CCDataSet(int _id = 0, int _parentId = 0)
         :   QObject(), suffix(""), color(QColor(StdColor)), data(nullptr), fromTime(0),
-            toTime(0), id(_id), parentId(_parentId), dataId(0), type(RawData) {}
+            toTime(0), id(_id), parentId(_parentId), dataId(0), type(RawData), statistics(nullptr) {}
     CCDataSet(const CCDataSet &other)
         :   QObject(), suffix(other.suffix), color(other.color), data(other.data), fromTime(other.fromTime),
-            toTime(other.toTime), id(0), parentId(other.id), dataId(other.dataId), type(DerivedData)
+            toTime(other.toTime), id(0), parentId(other.id), dataId(other.dataId), type(DerivedData), statistics(nullptr)
             {}
     ~CCDataSet()
-            { data.clear(); }
+            { data.clear(); delete statistics; }
 
     inline void                 setSuffix(const QString &_suffix)
                                     { suffix = _suffix; }
     inline QString              getSuffix() const
                                     { return suffix; }
     inline QString              getName() const
-                                    { return data ? data->name + suffix : suffix; }
+                                    { return data ? data->name + ": " + suffix : suffix; }
     inline void                 setColor(const QColor &_color)
                                     { color = _color; }
     inline QColor               getColor() const
@@ -104,9 +116,15 @@ public:
                                     { type = _type; }
     inline int                  getType() const
                                     { return type; }
+    inline bool                 isType(DataType _type)
+                                    { return type & _type; }
+    inline void                 setStatistics(AlgorithmData *_statistics)
+                                    { delete statistics; statistics = _statistics;}
+    inline AlgorithmData        *getStatistics()
+                                    { return statistics; }
 
     inline int                  size() const
-                                    { return data ? (toTime - fromTime) / data->interval : 0; }
+                                    { return data ? (toTime - fromTime) / data->interval + 1 : 0; }
 
     inline CCDataIterator       begin() const
                                     { return data ? data->internal.lowerBound(fromTime) : nullptr; }
@@ -123,6 +141,7 @@ private:
     CCDataPtr                   data;
     qint64                      fromTime, toTime;
     int                         id, parentId, dataId, type;
+    AlgorithmData               *statistics;
 };
 
 #define CCDataSetPtr      QSharedPointer<CCDataSet>

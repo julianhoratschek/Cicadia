@@ -1,13 +1,14 @@
 #include "histogram.h"
 
-Histogram::Histogram(const CCDataSet &dataset, int classCount)
-    : AlgorithmBase(AlgorithmBase::Histogram), data(new CCData(dataset.getData()->name))
+Histogram::Histogram(QSharedPointer<CCDataSet> &dataset, int classCount)
+    : AlgorithmBase<CCDoubleDataPtr>(AlgorithmType::Histogram),
+      data(new CCData<double>(dataset->getData()->name))
 {
     double              cutoff = 0;
-    QVector<double>     dt(dataset.size());
+    QVector<double>     dt(dataset->size());
 
     int i = 0;
-    for(auto it = dataset.begin(); it != dataset.end(); it++)
+    for(auto it = dataset->begin(); it != dataset->end(); it++)
         dt[i++] = it->value;
 
     std::sort(dt.begin(), dt.end());
@@ -18,7 +19,7 @@ Histogram::Histogram(const CCDataSet &dataset, int classCount)
 
     for(auto d: dt) {
         if(d >= cutoff) {
-            cutoff += steps * (d / cutoff);
+            cutoff += steps * (int)(d / cutoff);
             data->insert(cutoff, 0);
         }
 

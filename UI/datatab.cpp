@@ -1,6 +1,8 @@
 #include "datatab.h"
 #include "ui_datatab.h"
 
+const QString       DataTab::timeFormat = "yy-MM-dd HH:mm";
+
 DataTab::DataTab(QWidget *parent, CCDataBase *_dataBase) :
     QWidget(parent),
     ui(new Ui::DataTab),
@@ -10,6 +12,11 @@ DataTab::DataTab(QWidget *parent, CCDataBase *_dataBase) :
     currentColumn(0)
 {
     ui->setupUi(this);
+
+    options.histogramClassCount = 10;
+    options.cosinorTimePeriod = SecsInDay;
+
+    ui->statisticsTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 }
 
 
@@ -40,8 +47,11 @@ void DataTab::setDataTableModel(DataTableModel *model)
 
 void DataTab::addDataset(QSharedPointer<CCDataSet> dataset)
 {
-    if(dataset && dataTableModel)
+    if(dataset && dataTableModel) {
         dataTableModel->insertDataset(dataset);
+        if(dataset->isType(static_cast<CCDataSet::DataType>(AlgorithmType::Cosinor)))
+            statisticsTableModel->addItem(dataTableModel->columnCount() - 1, AlgorithmType::Cosinor);
+    }
 }
 
 
@@ -51,7 +61,8 @@ QSharedPointer<CCDataSet> DataTab::columnSelectionToDataset(const QModelIndexLis
 
     ret->setRange(column.first().data(KeyRole).toLongLong(),
                   column.last().data(KeyRole).toLongLong());
-    ret->setSuffix("Derived");
+    ret->setSuffix("(" + QDateTime::fromSecsSinceEpoch(ret->from()).toString(timeFormat) + " to " +
+                   QDateTime::fromSecsSinceEpoch(ret->to()).toString(timeFormat) + ")");
 
     return ret;
 }
@@ -94,17 +105,24 @@ void DataTab::on_actionChange_Color_triggered()
 
 void DataTab::on_dataTableView_customContextMenuRequested(const QPoint &pos)
 {
-    QMenu           contextMenu, *dataMenu, *plotMenu;
+    QMenu           contextMenu, *dataMenu, *plotMenu, *methodsMenu;
 
     currentColumn = ui->dataTableView->columnAt(pos.x());
 
     dataMenu = contextMenu.addMenu("Data Manipulation");
         dataMenu->addAction(ui->actionCreate_Dataset);
         dataMenu->addAction(ui->actionSplit_Days);
+        dataMenu->addSeparator();
         dataMenu->addAction(ui->actionChange_Color);
         dataMenu->addAction(ui->actionExport_Data);
+        dataMenu->addSeparator();
+        dataMenu->addAction(ui->actionRemove_Dataset);
+    methodsMenu = contextMenu.addMenu("Calculate");
+        methodsMenu->addAction(ui->actionSingle_Component_Cosinor);
     plotMenu = contextMenu.addMenu("Plots");
         plotMenu->addAction(ui->actionPlot_Data);
+        plotMenu->addAction(ui->actionHistogram);
+    contextMenu.addAction(ui->actionShow_Options);
 
     /*selectionMenu = contextMenu.addMenu("Selection");
         selectionMenu->addAction(ui->actionColumnsToDataset);
@@ -184,7 +202,7 @@ void DataTab::on_actionExport_Data_triggered()
 
 void DataTab::on_actionShow_Options_triggered()
 {
-    OptionsDialog           diag;
+    OptionsDialog           diag(this, &options);
 
     diag.exec();
 }
@@ -194,13 +212,16 @@ void DataTab::on_actionSplit_Days_triggered()
     auto            sorted = sortSelectedModelIndexesByColumns();
 
     for(auto col: sorted) {
-        for(quint64 dtFrom = col.first().data(KeyRole).toLongLong(), dtTo = dtFrom + SecsInDay;
+        for(qint64 dtFrom = col.first().data(KeyRole).toLongLong(), dtTo = dtFrom + SecsInDay;
             dtTo < col.last().data(KeyRole).toLongLong(); dtTo += SecsInDay) {
                 CCDataSetPtr        dataset(new CCDataSet(*dataTableModel->getDataset(col.first().column())));
                 dataset->setRange(dtFrom, dtTo);
+                dataset->setSuffix("(" + QDateTime::fromSecsSinceEpoch(dataset->from()).toString(timeFormat) + " to " +
+                                   QDateTime::fromSecsSinceEpoch(dataset->to()).toString(timeFormat) + ")");
                 dtFrom = dtTo;
 
-                dataTableModel->insertDataset(dataBase->insertDataset(dataset, dataset->getDataId()));
+               if(dataTableModel->insertDataset(dataBase->insertDataset(dataset, dataset->getDataId())))
+                   emit datasetInserted(dataset);
         }
     }
 }
@@ -208,9 +229,36 @@ void DataTab::on_actionSplit_Days_triggered()
 void DataTab::on_actionHistogram_triggered()
 {
     auto            sorted = sortSelectedModelIndexesByColumns();
+    CCDataSetPtr    dataset = columnSelectionToDataset(sorted.first().values());
 
-    Histogram       h(*columnSelectionToDataset(sorted.first().values()), 5);
+    Histogram       h(dataset, options.histogramClassCount);
     PlotDialog      pd(this, h);
 
     pd.exec();
+}
+
+void DataTab::on_actionRemove_Dataset_triggered()
+{
+    dataTableModel->removeDataset(currentColumn);
+}
+
+void DataTab::on_actionSingle_Component_Cosinor_triggered()
+{
+    auto            sorted = sortSelectedModelIndexesByColumns();
+
+    for(auto cols: sorted) {
+        CCDataSetPtr        dataset = columnSelectionToDataset(cols.values());
+        Cosinor             c(dataset, options.cosinorTimePeriod);
+        CCDataPtr           data = c.getData();
+
+        CCDataSetPtr        insert = dataBase->insertData(data, dataset->getParentId(), c.getName(), dataset->getColor(), (CCDataSet::DataType)(CCDataSet::ProcessedData | AlgorithmType::Cosinor));
+
+        insert->setSuffix("Raw");
+
+        insert->setStatistics(c.getPack());
+        if(dataTableModel->insertDataset(insert)) {
+            statisticsTableModel->addItem(dataTableModel->columnCount()-1, AlgorithmType::Cosinor);
+            emit datasetInserted(insert);
+        }
+    }
 }

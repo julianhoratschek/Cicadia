@@ -5,15 +5,14 @@
 
 
 struct StatisticsTableItem {
-    int                             dataTableColumn;
-    QMap<QString, double>           display;
-    double                          alpha;
-    AlgorithmBase::AlgorithmType    type;
+    int                                         dataTableColumn;
+    double                                      alpha;
+    AlgorithmType::Name                         type;
 
     StatisticsTableItem()
-        : dataTableColumn(0), alpha(0.05), type(AlgorithmBase::SingleComponentCosinor) {}
+        : dataTableColumn(0), alpha(0.05), type(AlgorithmType::SingleComponentCosinor) {}
     StatisticsTableItem(const StatisticsTableItem &other)
-        : dataTableColumn(other.dataTableColumn), display(other.display), alpha(other.alpha), type(other.type) {}
+        : dataTableColumn(other.dataTableColumn), alpha(other.alpha), type(other.type) {}
 
     void save(QDataStream &stream) const;
     void load(QDataStream &stream);
@@ -28,8 +27,8 @@ public:
 
 #define StatisticsTableModel_ColumnCount        3
     enum ColumnTypes {
-        AlphaColumn = 0,
-        NameColumn,
+        NameColumn = 0,
+        AlphaColumn,
         DataColumn
     };
 
@@ -45,7 +44,7 @@ public:
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
     // Add data:
-    bool addItem(int dataTableColumn, AlgorithmBase::AlgorithmType type);
+    bool addItem(int dataTableColumn, AlgorithmType::Name type);
 
     // Remove data:
     bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;

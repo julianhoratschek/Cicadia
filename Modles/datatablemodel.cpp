@@ -14,6 +14,8 @@ QVariant DataTableModel::headerData(int section, Qt::Orientation orientation, in
         else if(orientation == Qt::Vertical)
             return QTime::fromMSecsSinceStartOfDay((timeStart * 1000 + section * timeInterval * 1000) % (SecsInDay * 1000)).toString("hh:mm");
     }
+    else if(role == Qt::DecorationRole && orientation == Qt::Horizontal)
+        return dataTable[section]->getColor();
 
     return QVariant();
 }
@@ -54,7 +56,7 @@ QVariant DataTableModel::data(const QModelIndex &index, int role) const
         return role == Qt::DisplayRole ? (dataset->begin() + add).value().value : (dataset->begin() + add).key();
     }
     else if(role == Qt::BackgroundRole)
-        return (oob || !(dataset->begin() + add).value().used) ? dataset->getColor().lighter() : dataset->getColor();
+        return (oob || !(dataset->begin() + add).value().used) ? QColor(UnusedColor) : dataset->getColor();
     else if(role == UsedRole)
         return !oob && (dataset->begin() + add).value().used;
 
@@ -85,7 +87,7 @@ bool DataTableModel::insertDataset(CCDataSetPtr dataset)
 
     int         size = (t - timeStart) / timeInterval + dataset->size();
     if(size > rows) {
-        beginInsertRows(QModelIndex(), rows, size);
+        beginInsertRows(QModelIndex(), rows, size-1);
         rows = size;
         endInsertRows();
     }
@@ -101,7 +103,7 @@ bool DataTableModel::insertDataset(CCDataSetPtr dataset)
 
 bool DataTableModel::removeDataset(int column)
 {
-    beginRemoveColumns(createIndex(0, 0), column, column);
+    beginRemoveColumns(QModelIndex(), column, column);
     dataTable.remove(column);
     endRemoveColumns();
 

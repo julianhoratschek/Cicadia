@@ -1,6 +1,6 @@
 #include "populationcosinor.h"
 
-PopulationCosinor::PopulationCosinor()
+/*PopulationCosinor::PopulationCosinor()
 {
 
-}
+}*/

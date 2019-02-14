@@ -67,7 +67,7 @@ private:
 #define groupsItem              root->children[1]
     CCDataBase                  *dataBase;
 
-    QModelIndex                 getModelIndex(QSharedPointer<CCDataSet> search, SubjectsTreeItem *ptr = nullptr) const;
+    QModelIndex                 getModelIndex(const QSharedPointer<CCDataSet> &search, SubjectsTreeItem *ptr = nullptr) const;
 };
 
 #endif // SUBJECTSTREEMODEL_H

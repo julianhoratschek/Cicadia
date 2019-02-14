@@ -101,7 +101,7 @@ void MainWindow::plotData(CCDataSetPtr dataset, const QModelIndexList &list)
     pen.setColor(dataset->getColor());
     ui->customPlot->graph()->setPen(pen);
 
-    ui->customPlot->graph()->setSelectable(QCP::stDataRange);
+    ui->customPlot->graph()->setSelectable(QCP::stSingleData);
 
     for(auto it: list) {
         keys << it.data(KeyRole).toLongLong() - dt.toSecsSinceEpoch();
@@ -131,6 +131,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
             }
         }
         ui->customPlot->replot();
+        break;
     default:
         QMainWindow::keyPressEvent(event);
     }

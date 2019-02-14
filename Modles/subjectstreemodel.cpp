@@ -15,18 +15,21 @@ SubjectsTreeModel::SubjectsTreeModel(QObject *parent, CCDataBase *_dataBase)
 
     for(auto subject: subjects) {
         auto        datasets = dataBase->selectDatasets(subject.id);
-        auto        node = subject.isGroup ? groupsItem : subjectsItem,
+
+        for(auto dataset: datasets)
+            insertDataset(dataset);
+        /*auto        node = subject.isGroup ? groupsItem : subjectsItem,
                     newNode = new SubjectsTreeItem(node);
 
         newNode->dataset = datasets.first();
-        newNode->name = subject.name + "_" + datasets.first()->getSuffix();
+        newNode->name = subject.name + ": " + datasets.first()->getSuffix();
         node->children.append(newNode);
 
         for(int i = 1; i < datasets.count(); i++) {
             newNode->children.append(new SubjectsTreeItem(newNode));
             newNode->children.last()->dataset = datasets[i];
             newNode->children.last()->name = datasets[i]->getName();
-        }
+        }*/
     }
 }
 
@@ -126,7 +129,8 @@ QVariant SubjectsTreeModel::data(const QModelIndex &index, int role) const
         }
         break;
     case Qt::BackgroundRole:
-        return ptr->dataset->getColor();
+        if(ptr->dataset)
+            return ptr->dataset->getColor();
     }
 
     return QVariant();
@@ -172,7 +176,7 @@ void SubjectsTreeModel::insertDataset(CCDataSetPtr newSet)
     beginInsertRows(parent, parentItem->children.count(), parentItem->children.count());
     parentItem->children.append(new SubjectsTreeItem(parentItem));
     parentItem->children.last()->dataset = newSet;
-    parentItem->children.last()->name = s.name + "_" + newSet->getSuffix();
+    parentItem->children.last()->name = s.name + ": " + newSet->getSuffix();
     endInsertRows();
 }
 
@@ -187,10 +191,13 @@ bool SubjectsTreeModel::removeRows(int row, int count, const QModelIndex &parent
 }
 
 
-QModelIndex SubjectsTreeModel::getModelIndex(CCDataSetPtr search, SubjectsTreeItem *ptr) const
+QModelIndex SubjectsTreeModel::getModelIndex(const CCDataSetPtr &search, SubjectsTreeItem *ptr) const
 {
-    if(ptr->dataset == search)
-        return createIndex(0, 0, ptr);
+    if(!search)
+        return QModelIndex();
+
+    if(ptr->dataset && (ptr->dataset->getId() == search->getId()))
+        return createIndex(ptr->parent->children.indexOf(ptr), 0, ptr);
 
     for(int i = 0; i < ptr->children.count(); i++) {
         QModelIndex     ret = getModelIndex(search, ptr->children[i]);

@@ -7,6 +7,7 @@
 #include "optionsdialog.h"
 
 #include "../Algorithms/histogram.h"
+#include "../Algorithms/cosinor.h"
 
 #include <QWidget>
 #include <QMenu>
@@ -58,7 +59,13 @@ private slots:
 
     void on_actionHistogram_triggered();
 
+    void on_actionRemove_Dataset_triggered();
+
+    void on_actionSingle_Component_Cosinor_triggered();
+
 private:
+    static const QString        timeFormat;
+
     Ui::DataTab                 *ui;
 
     CCDataBase                  *dataBase;
@@ -66,6 +73,7 @@ private:
     StatisticsTableModel        *statisticsTableModel;
 
     int                         currentColumn;
+    TabOptions                  options;
 
     SortedModelIndexes sortSelectedModelIndexesByColumns() const;
 };

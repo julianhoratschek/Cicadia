@@ -40,4 +40,9 @@
 
 #include <QDateTime>
 
+/*#include <../include/Eigen/Core>
+#include <../include/Eigen/LU>
+#include <../include/Eigen/QR>*/
+#include <../include/StatsLib/include/stats.hpp>
+
 //#endif // PRECOMP_H

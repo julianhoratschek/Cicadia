@@ -1,22 +1,22 @@
 #ifndef HISTOGRAM_H
 #define HISTOGRAM_H
 
-#include "algorithmbase.h"
+#include "../dataset.h"
 
-class Histogram : public AlgorithmBase
+class Histogram : public AlgorithmBase<CCDoubleDataPtr>
 {
 
 public:
 
     // Public Methods
 
-    Histogram(const CCDataSet &dataset, int classCount);
+    Histogram(CCDataSetPtr &dataset, int classCount);
 
-    CCDataPtr               getData() const override { return data; }
+    CCDoubleDataPtr         getData() const override { return data; }
     inline double           stepWidth() const { return steps; }
 
 private:
-    CCDataPtr                   data;
+    CCDoubleDataPtr             data;
     double                      steps;
 };
 

@@ -32,7 +32,7 @@ CCDataSetPtr CCDataBase::importFromFile(const QString &fileName)
     QFileInfo           info(fileName);
     QFile               fl(fileName);
     QTextStream         stream(&fl);
-    CCDataPtr           data(new CCData(""));
+    CCDataPtr           data(new CCData<qint64>(""));
 
 
     if(info.suffix() != "csv")
@@ -146,7 +146,7 @@ QSharedPointer<CCDataSet> CCDataBase::selectDataset(int datasetId)
 }
 
 
-QSharedPointer<CCData> CCDataBase::selectData(int dataId)
+CCDataPtr CCDataBase::selectData(int dataId)
 {
     if(dataContainer.contains(dataId))
         return dataContainer[dataId];
@@ -158,7 +158,7 @@ QSharedPointer<CCData> CCDataBase::selectData(int dataId)
     if(!q.exec() || !q.next())
         return nullptr;
 
-    CCDataPtr               dt(new CCData(q.value("Name").toString()));
+    CCDataPtr               dt(new CCData<qint64>(q.value("Name").toString()));
 
     q.prepare("select `Time`, `Value`, `Used` from `Data` where `ID` = ?");
     q.addBindValue(dataId);
@@ -172,7 +172,7 @@ QSharedPointer<CCData> CCDataBase::selectData(int dataId)
     dt->interval = (dt->internal.lastKey() - dt->internal.firstKey()) / dt->internal.size();
     int         diff = dt->interval % 10;
     if(diff != 0)
-        dt->interval += diff > 5 ? 10 - diff : -diff;
+        dt->interval += 10 - diff;
     dataContainer.insert(dataId, dt);
 
     return dt;
@@ -208,7 +208,7 @@ QSharedPointer<CCDataSet> CCDataBase::insertDataset(QSharedPointer<CCDataSet> da
 }
 
 
-QSharedPointer<CCDataSet> CCDataBase::insertData(QSharedPointer<CCData> data, int parentId, const QString &suffix, const QColor &color, CCDataSet::DataType type)
+QSharedPointer<CCDataSet> CCDataBase::insertData(CCDataPtr data, int parentId, const QString &suffix, const QColor &color, CCDataSet::DataType type)
 {
     beginOperation;
 
@@ -260,7 +260,7 @@ int CCDataBase::updateDataset(const CCDataSet &dataset)
 
     q.prepare("update `Dataset` set `Suffix` = ?, `Color` = ? where `ID` = ?");
     q.addBindValue(dataset.getSuffix());
-    q.addBindValue(dataset.getColor());
+    q.addBindValue(dataset.getColor().rgb());
     q.addBindValue(dataset.getId());
     if(!q.exec())
         return false;
@@ -272,11 +272,12 @@ void CCDataBase::hideData(CCDataSetPtr dataset, qint64 start, qint64 end)
 {
     QSqlQuery               q(db);
 
-    q.prepare("update `Data` set `Used` = false where `ID` = ? and `Start` >= ? and `End` <= ?");
+    q.prepare("update `Data` set `Used` = false where `ID` = ? and `Value` >= ? and `Value` <= ?");
     q.addBindValue(dataset->getDataId());
     q.addBindValue(start);
     q.addBindValue(end);
-    q.exec();
+    if(!q.exec())
+        return;
 
     if(dataContainer.contains(dataset->getDataId())) {
         for(qint64 i = start; i <= end; i++)

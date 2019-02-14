@@ -7,12 +7,12 @@ StatisticsTableModel::StatisticsTableModel(QObject *parent, DataTableModel *_dat
 
 QVariant StatisticsTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-    if(orientation == Qt::Horizontal) {
+    if(role == Qt::DisplayRole && orientation == Qt::Horizontal) {
         switch(section) {
-        case AlphaColumn:
-            return "Alpha";
         case NameColumn:
             return "Name";
+        case AlphaColumn:
+            return "Alpha";
         case DataColumn:
             return "Data";
         }
@@ -47,20 +47,21 @@ QVariant StatisticsTableModel::data(const QModelIndex &index, int role) const
 
     if(role == Qt::DisplayRole) {
         switch(index.column()) {
-        case AlphaColumn:
-            return items[index.row()].alpha;
-
         case NameColumn:
             return dataTable->headerData(items[index.row()].dataTableColumn, Qt::Horizontal);
+
+        case AlphaColumn:
+            return items[index.row()].alpha;
 
         case DataColumn:
             QString         s = "";
             QTextStream     out(&s);
+            QStringList     l = dataTable->getDataset(items[index.row()].dataTableColumn)->getStatistics()->toString();
 
             out.setFieldWidth(25);
 
-            for(auto it = items[index.row()].display.begin(); it != items[index.row()].display.end(); it++)
-                out << it.key() << it.value();
+            for(int i=0;i<l.length();i+=2)
+                out << l[i] << l[i+1] << endl;
 
             return s;
         }
@@ -72,9 +73,9 @@ QVariant StatisticsTableModel::data(const QModelIndex &index, int role) const
 }
 
 
-bool StatisticsTableModel::addItem(int dataTableColumn, AlgorithmBase::AlgorithmType type)
+bool StatisticsTableModel::addItem(int dataTableColumn, AlgorithmType::Name type)
 {
-    beginInsertRows(createIndex(0, 0), items.count(), items.count());
+    beginInsertRows(QModelIndex(), items.count(), items.count());
     StatisticsTableItem     item;
 
     item.dataTableColumn = dataTableColumn;
@@ -132,19 +133,16 @@ quint32 StatisticsTableModel::load(QDataStream &stream)
 void StatisticsTableItem::save(QDataStream &stream) const
 {
     stream << CCSerialization::CCSStatisticsTableItem;
-    stream << dataTableColumn << alpha << (quint32)type << display;
+    stream << dataTableColumn << alpha << (quint32)type;
 }
 
 void StatisticsTableItem::load(QDataStream &stream)
 {
     quint32         tp;
 
-    display.clear();
-
     stream >> dataTableColumn;
     stream >> alpha;
     stream >> tp;
-    stream >> display;
 
-    type = (AlgorithmBase::AlgorithmType)tp;
+    type = (AlgorithmType::Name)tp;
 }
