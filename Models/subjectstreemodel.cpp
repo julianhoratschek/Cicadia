@@ -183,11 +183,25 @@ void SubjectsTreeModel::insertDataset(CCDataSetPtr newSet)
 
 bool SubjectsTreeModel::removeRows(int row, int count, const QModelIndex &parent)
 {
+    auto        parentItem = static_cast<SubjectsTreeItem*>(parent.internalPointer());
+
+    for(int i=row; i<row+count; i++)
+        emit removedDataset(parentItem->children[i]->dataset->getId());
+
     beginRemoveRows(parent, row, row + count - 1);
-    // FIXME: Implement me!
+    parentItem->children.remove(row, count);
     endRemoveRows();
 
     return true;
+}
+
+void SubjectsTreeModel::deleteDataset(const QSharedPointer<CCDataSet> &deleteSet)
+{
+    auto                index = getModelIndex(dataBase->selectDataset(deleteSet->getId()), subjectsItem);
+    //SubjectsTreeItem    *parentItem = static_cast<SubjectsTreeItem*>(index.parent().internalPointer());
+
+    removeRows(index.row(), 1, index.parent());
+    dataBase->deleteDataset(deleteSet->getId());
 }
 
 

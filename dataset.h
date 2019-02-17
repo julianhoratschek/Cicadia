@@ -39,7 +39,8 @@ struct CCData {
 
     inline void insert(Key t, double v, bool u = true) { internal.insert(t, CCDataPoint(v, u)); }
     inline double &at(Key t) { return internal[t].value; }
-    inline bool &used(Key t) { return internal[t].used; }
+    inline bool used(Key t) { return internal[t].used; }
+    inline void setUsed(Key t, bool u = true) { if(internal.contains(t)) internal[t].used = u; }
     inline QVector<Key> keys() { return internal.keys().toVector(); }
     inline QVector<double> values() {
         QVector<double> ret(internal.size());
@@ -65,9 +66,9 @@ class CCDataSet : public QObject
 public:
 
     enum DataType {
-        RawData = 0,
-        DerivedData = 1,
-        ProcessedData = 1 << 20
+        RawData = 1 << 20,
+        DerivedData = 1 << 21,
+        ProcessedData = 1 << 22
     };
 
     CCDataSet(int _id = 0, int _parentId = 0)
@@ -117,7 +118,7 @@ public:
     inline int                  getType() const
                                     { return type; }
     inline bool                 isType(DataType _type)
-                                    { return type & _type; }
+                                    { return (type & _type) != 0; }
     inline void                 setStatistics(AlgorithmData *_statistics)
                                     { delete statistics; statistics = _statistics;}
     inline AlgorithmData        *getStatistics()
@@ -145,5 +146,7 @@ private:
 };
 
 #define CCDataSetPtr      QSharedPointer<CCDataSet>
+
+CCDataSet::DataType operator|(const CCDataSet::DataType &dt, const AlgorithmType &at);
 
 #endif // DATASET_H

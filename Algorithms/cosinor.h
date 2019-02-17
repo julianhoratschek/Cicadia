@@ -15,10 +15,23 @@
 #define EMatrix3ld      Eigen::Matrix<double, 3, 3>
 #define EVector3ld      Eigen::Matrix<double, 3, 1>*/
 
+namespace DataIndex {
+    enum DataType {
+        Sc11 = 0, Sc12, Sc13, Sc21, Sc22, Sc23, Sc31, Sc32, Sc33,
+        Mesor,
+        Amplitude,
+        Acrophase,
+        RSS,
+        MSS,
+        Period,
+        Size
+    };
+}
+
 struct CosinorData : public AlgorithmData
 {
     double              M, A, phi, RSS, MSS, tau;
-    double              CI_M, CI_A, CI_phi, F, ZeroF;
+    double              CI_M, CI_A, CI_phi, F, ZeroF, R, RTest;
     qint64              N;
     Eigen::Matrix3d     Sinv;
 
@@ -29,6 +42,40 @@ struct CosinorData : public AlgorithmData
         MSS(other.MSS), tau(other.tau), N(other.N), Sinv(other.Sinv) {}
     ~CosinorData() override {}
 
+    void load(const QString &s) override {
+        QStringList     l = s.split(";");
+
+        for(int i=0;i<3;i++)
+            for(int j=0;j<3;j++)
+                Sinv(i, j) = l[i * 3 + j].toDouble();
+                //ret->set("Sinv" + QString::number(i * 3 + j), Sinv(i, j));
+
+        M = l[DataIndex::Mesor].toDouble();
+        A = l[DataIndex::Amplitude].toDouble();
+        phi = l[DataIndex::Acrophase].toDouble();
+        RSS = l[DataIndex::RSS].toDouble();
+        MSS = l[DataIndex::MSS].toDouble();
+        tau = l[DataIndex::Period].toDouble();
+        N = l[DataIndex::Size].toLongLong();
+    }
+
+    QString save() const override {
+        QStringList         l;
+
+        for(int i=0;i<3;i++)
+            for(int j=0;j<3;j++)
+                l << QString::number(Sinv(i, j));
+        l << QString::number(M);
+        l << QString::number(A);
+        l << QString::number(phi);
+        l << QString::number(RSS);
+        l << QString::number(MSS);
+        l << QString::number(tau);
+        l << QString::number(N);
+
+        return l.join(";");
+    }
+
     QStringList toString() const override {
         return {
                     "Mesor:", QString::number(M),
@@ -37,7 +84,8 @@ struct CosinorData : public AlgorithmData
                     "-- CI:", "[" + QString::number(A - CI_A) + "; " + QString::number(A + CI_A) + "]",
                     "Acrophase:", QString::number(phi),
                     "-- CI:", "[" + QString::number(phi - CI_phi) + "; " + QString::number(phi + CI_phi) + "]",
-                    "Zero Amplitude:", QString::number(F) + " > " + QString::number(ZeroF)
+                    "Zero Amplitude:", QString::number(F) + " > " + QString::number(ZeroF),
+                    "Runs Test:", QString::number(R) + " <> " + QString::number(RTest)
         };
     }
 };
@@ -46,12 +94,18 @@ struct CosinorData : public AlgorithmData
 class Cosinor : public AlgorithmBase<CCDataPtr>
 {
 public:
-    explicit Cosinor(CCDataSetPtr &_dataset, double _timePeriod);
-    explicit Cosinor(CCDataSetPtr &_cosinor, QSharedPointer<CCDataSet> &_parent, CosinorData *dt);
+    static int                          runsTestRuns;
+
+    Cosinor(const CCDataSetPtr &_dataset, double _timePeriod);
+    Cosinor(CosinorData *dt, const CCDataSetPtr &_cosinor, const CCDataSetPtr &_parent);
 
     void recalc(const double &alpha);
     CCDataPtr getData() const override;
     inline CosinorData *getPack() const { return reinterpret_cast<CosinorData*>(data); }
+
+    void MesorCI(CCDoubleDataPtr &upper, CCDoubleDataPtr &lower);
+    QSharedPointer<CCData<double> > rankitPlot() const;
+    QSharedPointer<CCData<double> > variancePlot() const;
 
 private:
 
@@ -72,6 +126,7 @@ private:
     void                        acroPhaseCI(const double &alpha);
     void                        amplitudeCI(const double &alpha);
     void                        zeroAmplitude(const double &alpha);
+    void                        runsTest(const double &alpha);
 
     // Private Members
 
@@ -83,6 +138,7 @@ private:
     CCDataSetPtr        dataset;
 
     void init();
+    void modelAdequacy(const QVector<QSharedPointer<CCDataSet> > &compare, const double &alpha) const;
 };
 
 #endif // COSINOR_H

@@ -6,6 +6,7 @@
 #include "../Algorithms/histogram.h"
 
 #include <QDialog>
+#include <QSvgGenerator>
 
 namespace Ui {
 class PlotDialog;
@@ -20,9 +21,15 @@ public:
     explicit PlotDialog(QWidget *parent, const Histogram &h);
     ~PlotDialog();
 
+    PlotDialog(QWidget *parent, const CCDoubleDataPtr &data);
 public slots:
     void oncustomPlot_MousePress(QMouseEvent *event);
     void oncustomPlot_MouseWheel(QWheelEvent *event);
+
+private slots:
+    void on_closePushButton_clicked();
+
+    void on_savePushButton_clicked();
 
 private:
     Ui::PlotDialog *ui;

@@ -10,7 +10,9 @@ class OptionsDialog;
 
 struct TabOptions
 {
-    int         histogramClassCount, cosinorTimePeriod;
+    int         histogramClassCount,
+                cosinorTimePeriod,
+                cosinorRunsTestRuns;
 };
 
 class OptionsDialog : public QDialog
@@ -21,6 +23,7 @@ public:
     enum OptionRows {
         HistogramClassRow = 0,
         CosinorTimePeriodRow = 1,
+        CosinorRunsTestRunsRow = 2
     };
 
     explicit OptionsDialog(QWidget *parent = nullptr, TabOptions *_options = nullptr);

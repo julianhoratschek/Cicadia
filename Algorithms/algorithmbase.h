@@ -3,17 +3,15 @@
 
 #include <QStringList>
 
-namespace AlgorithmType {
-    enum Name {
-        SingleComponentCosinor = 1,
-        MultipleComponentCosinor = 1 << 1,
-        PopulationCosinor = 1 << 2,
-        Cosinor = SingleComponentCosinor | MultipleComponentCosinor | PopulationCosinor,
-        Comparison = 1 << 3,
-        Histogram = 1 << 4,
-        HenningSmoothed = 1 << 5
-    };
-}
+enum class AlgorithmType {
+    SingleComponentCosinor = 1,
+    MultipleComponentCosinor = 1 << 1,
+    PopulationCosinor = 1 << 2,
+    Cosinor = SingleComponentCosinor | MultipleComponentCosinor | PopulationCosinor,
+    Comparison = 1 << 3,
+    Histogram = 1 << 4,
+    HenningSmoothed = 1 << 5
+};
 
 struct AlgorithmData
 {
@@ -25,6 +23,9 @@ struct AlgorithmData
         mean(other.mean) {}
     virtual ~AlgorithmData() {}
 
+    virtual void load(const QString &s) = 0;
+    virtual QString save() const = 0;
+
     virtual QStringList toString() const {
         return {"Mean: ", QString::number(mean)};
     }
@@ -34,16 +35,16 @@ template<typename DataPtr>
 class AlgorithmBase
 {
 public:
-    AlgorithmBase(AlgorithmType::Name _type = AlgorithmType::SingleComponentCosinor)
+    AlgorithmBase(AlgorithmType _type = AlgorithmType::SingleComponentCosinor)
         : type(_type), data(nullptr) {}
     virtual ~AlgorithmBase() {}
 
     virtual DataPtr         getData() const = 0;
-    AlgorithmType::Name     getType() { return type; }
+    AlgorithmType           getType() { return type; }
     QString                 getName() {
-        switch((int)type) {
+        switch(type) {
         case AlgorithmType::SingleComponentCosinor:
-            return "Single Component Cosionr";
+            return "Single Component Cosionor";
         case AlgorithmType::MultipleComponentCosinor:
             return "Multiple Component Cosinor";
         case AlgorithmType::PopulationCosinor:
@@ -63,7 +64,7 @@ protected:
     AlgorithmData               *data;
 
 private:
-    AlgorithmType::Name         type;
+    AlgorithmType               type;
 
 };
 

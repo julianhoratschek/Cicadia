@@ -10,6 +10,7 @@ OptionsDialog::OptionsDialog(QWidget *parent, TabOptions *_options) :
 
     ui->optionsTableWidget->item(HistogramClassRow, 0)->setText(QString::number(options->histogramClassCount));
     ui->optionsTableWidget->item(CosinorTimePeriodRow, 0)->setText(QString::number(options->cosinorTimePeriod));
+    ui->optionsTableWidget->item(CosinorRunsTestRunsRow, 0)->setText(QString::number(options->cosinorRunsTestRuns));
 }
 
 OptionsDialog::~OptionsDialog()
@@ -26,5 +27,7 @@ void OptionsDialog::on_optionsTableWidget_itemChanged(QTableWidgetItem *item)
     case CosinorTimePeriodRow:
         options->cosinorTimePeriod = item->text().toInt();
         break;
+    case CosinorRunsTestRunsRow:
+        options->cosinorRunsTestRuns = item->text().toInt();
     }
 }

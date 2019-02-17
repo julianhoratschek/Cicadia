@@ -55,6 +55,10 @@ public:
 
     // Remove data:
     bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
+    void deleteDataset(const CCDataSetPtr &deleteSet);
+
+signals:
+    void removedDataset(int id);
 
 
 public slots:

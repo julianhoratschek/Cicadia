@@ -74,7 +74,10 @@ void MainWindow::insertDataTab(int index) {
     ui->tabWidget->insertTab(index, tab, "Dataset");
 
     connect(tab, &DataTab::plotData, this, &MainWindow::plotData);
+    connect(tab, &DataTab::plotCI, this, &MainWindow::plotCI);
     connect(tab, &DataTab::datasetInserted, subjectsTreeModel, &SubjectsTreeModel::insertDataset);
+    connect(subjectsTreeModel, &SubjectsTreeModel::removedDataset, model, &DataTableModel::removeDataset);
+
 
     /*connect(tab, &DataTab::dataSetInserted, this, &MainWindow::ondataTab_dataSetInserted);
 
@@ -117,6 +120,52 @@ void MainWindow::plotData(CCDataSetPtr dataset, const QModelIndexList &list)
     ui->customPlot->replot();
 }
 
+void MainWindow::plotCI(const QSharedPointer<CCDataSet> &dataset)
+{
+    CCDataSetPtr        parentset = dataBase->selectDataset(dataset->getParentId());
+
+    if(!dataset->isType(static_cast<CCDataSet::DataType>(AlgorithmType::SingleComponentCosinor))) {
+        QMessageBox::warning(this, "Error", "Column must be of Type 'Cosinor'");
+        return;
+    }
+
+    Cosinor             c(static_cast<CosinorData*>(dataset->getStatistics()), dataset, parentset);
+    CCDoubleDataPtr     upper, lower;
+
+    c.MesorCI(upper, lower);
+
+    QCPGraph                    *ugraph = ui->customPlot->addGraph(),
+                                *lgraph = ui->customPlot->addGraph();
+    QVector<double>             uvalues, lvalues, keys;
+    QDateTime                   dt = QDateTime::fromSecsSinceEpoch(dataset->from());
+    dt.setTime(QTime::fromMSecsSinceStartOfDay(0));
+
+    QPen pen;
+
+    pen.setStyle(Qt::DotLine);
+    pen.setColor(dataset->getColor());
+    ugraph->setName("MesorCI " + dataset->getName());
+    ugraph->setPen(pen);
+    ugraph->setBrush(QBrush(QColor(dataset->getColor().lighter(300))));
+
+    //ui->customPlot->legend->removeItem(ui->customPlot->legend->itemCount()-1);
+    lgraph->setPen(pen);
+    ugraph->setChannelFillGraph(lgraph);
+
+    for(auto it = dataset->begin(); it != dataset->end(); it++) {
+        keys << it.key() - dt.toSecsSinceEpoch();
+        uvalues << upper->at(it.key());
+        lvalues << lower->at(it.key());
+    }
+
+    ugraph->setData(keys, uvalues);
+    lgraph->setData(keys, lvalues);
+
+    ui->customPlot->rescaleAxes();
+
+    ui->customPlot->replot();
+}
+
 void MainWindow::keyPressEvent(QKeyEvent *event)
 {
     switch(event->key()) {
@@ -125,8 +174,12 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
             for(auto range: graph->selection().dataRanges()) {
                 double      begin = graph->data()->at(range.begin())->key,
                             end = graph->data()->at(range.end())->key;
+                QDateTime   dt = QDateTime::fromSecsSinceEpoch(graphRelations[graph]->from());
+                dt.setTime(QTime::fromMSecsSinceStartOfDay(0));
 
-                dataBase->hideData(graphRelations[graph], begin, end);
+                dataBase->hideData(graphRelations[graph],
+                                   dt.toSecsSinceEpoch() + begin,
+                                   dt.toSecsSinceEpoch() + end);
                 graph->data()->remove(begin, end);
             }
         }
@@ -306,4 +359,24 @@ void MainWindow::on_actionOpen_triggered()
     }
 
     fl.close();
+}
+
+void MainWindow::on_subjectsTreeView_customContextMenuRequested(const QPoint &pos)
+{
+    QMenu           contextMenu;
+
+    currentDataset = static_cast<SubjectsTreeItem*>(ui->subjectsTreeView->indexAt(pos).internalPointer())->dataset;
+
+    if(!currentDataset)
+        return;
+
+    contextMenu.addAction(ui->actionDelete_Dataset);
+
+    contextMenu.exec(ui->subjectsTreeView->mapToGlobal(pos));
+}
+
+void MainWindow::on_actionDelete_Dataset_triggered()
+{
+    if(QMessageBox::question(this, "Delete Dataset", "Delete " + currentDataset->getName() + " and all its Children?") == QMessageBox::Yes)
+        subjectsTreeModel->deleteDataset(currentDataset);
 }

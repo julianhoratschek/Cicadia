@@ -1,17 +1,14 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "Modles/subjectstreemodel.h"
+#include "Models/subjectstreemodel.h"
 #include "UI/datatab.h"
 
 #include <QMainWindow>
 #include <QFileDialog>
 #include <QMessageBox>
-#include <QSvgGenerator>
 
 #include <QPen>
-
-#include "UI/qcustomplot.h"
 
 namespace Ui {
 class MainWindow;
@@ -29,6 +26,7 @@ public:
 
 public slots:
     void plotData(CCDataSetPtr dataset, const QModelIndexList &list);
+    void plotCI(const CCDataSetPtr &dataset);
 
 protected:
     virtual void keyPressEvent(QKeyEvent *event) override;
@@ -57,9 +55,14 @@ private slots:
 
     void on_actionOpen_triggered();
 
+    void on_subjectsTreeView_customContextMenuRequested(const QPoint &pos);
+
+    void on_actionDelete_Dataset_triggered();
+
 private:
     Ui::MainWindow                  *ui;
     SubjectsTreeModel               *subjectsTreeModel;
+    CCDataSetPtr                    currentDataset;
     CCDataBase                      *dataBase;
     QMap<QCPGraph*, CCDataSetPtr>   graphRelations;
 };

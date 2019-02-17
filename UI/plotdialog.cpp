@@ -52,6 +52,19 @@ PlotDialog::PlotDialog(QWidget *parent, const Histogram &h)
     ui->customPlot->rescaleAxes();
 }
 
+PlotDialog::PlotDialog(QWidget *parent, const CCDoubleDataPtr &data)
+    : PlotDialog(parent)
+{
+    QVector<double>         k = data->keys(),
+                            d = data->values();
+    ui->customPlot->addGraph();
+    ui->customPlot->graph()->setLineStyle(QCPGraph::lsNone);
+    ui->customPlot->graph()->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssCross));
+    ui->customPlot->graph()->setData(k, d);
+    ui->customPlot->rescaleAxes();
+    ui->customPlot->replot();
+}
+
 PlotDialog::~PlotDialog()
 {
     delete ui;
@@ -81,4 +94,24 @@ void PlotDialog::oncustomPlot_MousePress(QMouseEvent *event)
         else
             ui->customPlot->setSelectionRectMode(QCP::srmNone);
     }*/
+}
+
+void PlotDialog::on_closePushButton_clicked()
+{
+    close();
+}
+
+void PlotDialog::on_savePushButton_clicked()
+{
+    QSvgGenerator       gen;
+    QCPPainter          painter;
+    QString             fileName = QFileDialog::getSaveFileName(this, "Save Plot to", ".", "*.svg");
+
+    gen.setFileName(fileName);
+
+    painter.begin(&gen);
+    ui->customPlot->toPainter(&painter);
+    painter.end();
+
+    QMessageBox::information(this, "Success", "Plot was saved");
 }

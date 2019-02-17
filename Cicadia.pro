@@ -32,9 +32,9 @@ SOURCES += \
     UI/plotdialog.cpp \
     UI/datatab.cpp \
     UI/optionsdialog.cpp \
-    Modles/datatablemodel.cpp \
-    Modles/subjectstreemodel.cpp \
-    Modles/statisticstablemodel.cpp \
+    Models/datatablemodel.cpp \
+    Models/subjectstreemodel.cpp \
+    Models/statisticstablemodel.cpp \
     Algorithms/algorithmbase.cpp \
     Algorithms/cosinor.cpp \
     Algorithms/compare.cpp \
@@ -49,9 +49,9 @@ HEADERS += \
     UI/plotdialog.h \
     UI/datatab.h \
     UI/optionsdialog.h \
-    Modles/datatablemodel.h \
-    Modles/subjectstreemodel.h \
-    Modles/statisticstablemodel.h \
+    Models/datatablemodel.h \
+    Models/subjectstreemodel.h \
+    Models/statisticstablemodel.h \
     Algorithms/algorithmbase.h \
     Algorithms/cosinor.h \
     Algorithms/compare.h \

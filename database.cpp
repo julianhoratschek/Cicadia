@@ -16,6 +16,7 @@ CCDataBase::CCDataBase()
     db.exec("create table if not exists `Data` (`ID` INTEGER, `Time` DATETIME, `Value` REAL, `Used` BOOLEAN)");
     db.exec("create table if not exists `Dataset` (`ID` INTEGER primary key, `Parent_ID` INTEGER, `Data_ID` INTEGER, `Start` DATETIME, `End` DATETIME, `Suffix` TEXT, `Color` INTEGER, `Type` INTEGER)");
     db.exec("create table if not exists `DatasetRelations` (`Subject_ID` INTEGER, `Dataset_ID` INTEGER)");
+    db.exec("create table if not exists `Statistics` (`Dataset_ID` INTEGER, `Data` TEXT)");
 }
 
 
@@ -178,6 +179,17 @@ CCDataPtr CCDataBase::selectData(int dataId)
     return dt;
 }
 
+QString CCDataBase::selectStatistics(int datasetId)
+{
+    QSqlQuery       q(db);
+
+    q.prepare("select `Data` from `Statistics` where `Dataset_ID` = ?");
+    q.addBindValue(datasetId);
+    if(!q.exec() || !q.next())
+        return "";
+    return q.value(0).toString();
+}
+
 
 QSharedPointer<CCDataSet> CCDataBase::insertDataset(QSharedPointer<CCDataSet> dataset, int subjectId)
 {
@@ -236,7 +248,7 @@ QSharedPointer<CCDataSet> CCDataBase::insertData(CCDataPtr data, int parentId, c
     execOperation(nullptr)
 
     for(auto it = data->internal.begin(); it != data->internal.end(); it++) {
-        q.prepare("insert into `Data` (`ID`, `Time`, `Value`, `Used`) values (?, ?, ?, true)");
+        q.prepare("insert into `Data` (`ID`, `Time`, `Value`, `Used`) values (?, ?, ?, 1)");
         q.addBindValue(id);
         q.addBindValue(it.key());
         q.addBindValue(it.value().value);
@@ -251,6 +263,17 @@ QSharedPointer<CCDataSet> CCDataBase::insertData(CCDataPtr data, int parentId, c
     endOperation;
 
     return selectDataset(id);
+}
+
+void CCDataBase::insertStatistics(int datasetId, const QString &stats)
+{
+    QSqlQuery       q(db);
+
+    q.prepare("insert into `Statistics` (`Dataset_ID`, `Data`) values (?, ?)");
+    q.addBindValue(datasetId);
+    q.addBindValue(stats);
+
+    q.exec();
 }
 
 
@@ -272,7 +295,7 @@ void CCDataBase::hideData(CCDataSetPtr dataset, qint64 start, qint64 end)
 {
     QSqlQuery               q(db);
 
-    q.prepare("update `Data` set `Used` = false where `ID` = ? and `Value` >= ? and `Value` <= ?");
+    q.prepare("update `Data` set `Used` = 0 where `ID` = ? and `Time` >= ? and `Time` <= ?");
     q.addBindValue(dataset->getDataId());
     q.addBindValue(start);
     q.addBindValue(end);
@@ -280,9 +303,69 @@ void CCDataBase::hideData(CCDataSetPtr dataset, qint64 start, qint64 end)
         return;
 
     if(dataContainer.contains(dataset->getDataId())) {
-        for(qint64 i = start; i <= end; i++)
-            dataContainer[dataset->getDataId()]->used(i) = false;
+        for(qint64 i = start; i <= end; i += dataset->getData()->interval)
+            dataContainer[dataset->getDataId()]->setUsed(i, false);
     }
+}
+
+void CCDataBase::collectAndDeleteDatasets(int datasetId, QVector<int> *dataIds)
+{
+    QSqlQuery                   q(db);
+
+    q.prepare("select `ID`, `Data_ID` from `Dataset` where `Parent_ID` = ?");
+    q.addBindValue(datasetId);
+    q.exec();
+
+    while(q.next()) {
+        collectAndDeleteDatasets(q.value("ID").toInt(), dataIds);
+        if(!dataIds->contains(q.value("Data_ID").toInt()))
+            dataIds->append(q.value("Data_ID").toInt());
+    }
+
+    q.prepare("delete from `Dataset` where `ID` = ?");
+    q.addBindValue(datasetId);
+    q.exec();
+    q.prepare("delete from `DatasetRelations` where `Dataset_ID` = ?");
+    q.addBindValue(datasetId);
+    q.exec();
+    q.prepare("delete from `Statistics` where `Dataset_ID` = ?");
+    q.addBindValue(datasetId);
+    q.exec();
+
+    if(datasets.contains(datasetId))
+        datasets.remove(datasetId);
+}
+
+void CCDataBase::deleteDataset(int datasetId)
+{
+    QSqlQuery                   q(db);
+    QVector<int>                dataIds;
+
+    collectAndDeleteDatasets(datasetId, &dataIds);
+
+    for(auto it: dataIds) {
+        q.prepare("select `ID` from `DataSet` where `Data_ID` = ?");
+        q.addBindValue(it);
+        q.exec();
+        if(q.size() < 1) {
+            q.prepare("delete from `Data` where `ID` = ?");
+            q.addBindValue(it);
+            q.exec();
+            q.prepare("delete from `Subject` where `ID` = ?");
+            q.addBindValue(it);
+            q.exec();
+            q.prepare("delete from `SubjectMeta` where `Subject_ID` = ?");
+            q.addBindValue(it);
+            q.exec();
+            q.prepare("delete from `GroupRelations` where `Subject_ID` = ?");
+            q.addBindValue(it);
+            q.exec();
+
+            if(dataContainer.contains(it))
+                dataContainer.remove(it);
+        }
+    }
+
 }
 
 

@@ -58,22 +58,39 @@ QVariant StatisticsTableModel::data(const QModelIndex &index, int role) const
             QTextStream     out(&s);
             QStringList     l = dataTable->getDataset(items[index.row()].dataTableColumn)->getStatistics()->toString();
 
-            out.setFieldWidth(25);
-
-            for(int i=0;i<l.length();i+=2)
-                out << l[i] << l[i+1] << endl;
+            for(int i=0;i<l.length();i+=2) {
+                out << qSetFieldWidth(25) << left << "\n" + l[i] << left << l[i+1];
+            }
 
             return s;
         }
     }
     else if(role == Qt::BackgroundRole)
-        return dataTable->data(createIndex(0, items[index.row()].dataTableColumn), role);
+        return dataTable->getDataset(items[index.row()].dataTableColumn)->getColor();
 
     return QVariant();
 }
 
 
-bool StatisticsTableModel::addItem(int dataTableColumn, AlgorithmType::Name type)
+bool StatisticsTableModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+    if(index.column() != AlphaColumn)
+        return false;
+
+    CCDataSetPtr    dataset = dataTable->getDataset(items[index.row()].dataTableColumn);
+    Cosinor         c(static_cast<CosinorData*>(dataset->getStatistics()),
+                      dataset, dataTable->getDatabase()->selectDataset(dataset->getParentId()));
+
+    items[index.row()].alpha = value.toString().toDouble();
+    c.recalc(items[index.row()].alpha);
+
+    emit dataChanged(index, index.siblingAtColumn(DataColumn), {Qt::DisplayRole});
+
+    return true;
+}
+
+
+bool StatisticsTableModel::addItem(int dataTableColumn, AlgorithmType type)
 {
     beginInsertRows(QModelIndex(), items.count(), items.count());
     StatisticsTableItem     item;
@@ -91,11 +108,18 @@ bool StatisticsTableModel::addItem(int dataTableColumn, AlgorithmType::Name type
 
 bool StatisticsTableModel::removeRows(int row, int count, const QModelIndex &parent)
 {
-    beginRemoveRows(parent, row, row + count - 1);
+    beginRemoveRows(QModelIndex(), row, row + count - 1);
     items.remove(row);
     endRemoveRows();
 
     return true;
+}
+
+Qt::ItemFlags StatisticsTableModel::flags(const QModelIndex &index) const
+{
+    if(index.column() == AlphaColumn)
+        return Qt::ItemIsEditable | QAbstractTableModel::flags(index);
+    return QAbstractTableModel::flags(index);
 }
 
 void StatisticsTableModel::save(QDataStream &stream)
@@ -128,6 +152,21 @@ quint32 StatisticsTableModel::load(QDataStream &stream)
     return 0;
 }
 
+void StatisticsTableModel::removeDataset(int column)
+{
+    int     r = -1;
+
+    for(int i = 0;i < items.size(); i++) {
+        if(items[i].dataTableColumn == column)
+            r = i;
+        else if(items[i].dataTableColumn > column)
+            items[i].dataTableColumn--;
+    }
+
+    if(r >= 0)
+        removeRows(r, 1);
+}
+
 
 
 void StatisticsTableItem::save(QDataStream &stream) const
@@ -144,5 +183,5 @@ void StatisticsTableItem::load(QDataStream &stream)
     stream >> alpha;
     stream >> tp;
 
-    type = (AlgorithmType::Name)tp;
+    type = static_cast<AlgorithmType>(tp);
 }

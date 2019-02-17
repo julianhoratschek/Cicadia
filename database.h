@@ -48,13 +48,16 @@ public:
     QVector<CCDataSetPtr>           selectDatasets(int subjectId);
     CCDataSetPtr                    selectDataset(int datasetId);
     CCDataPtr                       selectData(int dataId);
+    QString                         selectStatistics(int datasetId);
 
     CCDataSetPtr                    insertDataset(CCDataSetPtr dataset, int subjectId);
     CCDataSetPtr                    insertData(CCDataPtr data, int parentId = 0, const QString &suffix = "Raw", const QColor &color = QColor(StdColor), CCDataSet::DataType type = CCDataSet::RawData);
+    void                            insertStatistics(int datasetId, const QString &stats);
 
     int                             updateDataset(const CCDataSet &dataset);
 
     void                            hideData(CCDataSetPtr dataset, qint64 start, qint64 end);
+    void                            deleteDataset(int datasetId);
 
     void save(const QString &fileName);
     void load(const QString &fileName);
@@ -67,6 +70,7 @@ private:
 
     CCDataSetPtr                    addDataset(const QSqlQuery &q);
     QDateTime                       cleanTime(const QDateTime &dt) const;
+    void collectAndDeleteDatasets(int datasetId, QVector<int> *dataIds);
 };
 
 #endif // DATABASE_H

@@ -1,7 +1,7 @@
 #ifndef DATATAB_H
 #define DATATAB_H
 
-#include "Modles/statisticstablemodel.h"
+#include "Models/statisticstablemodel.h"
 
 #include "plotdialog.h"
 #include "optionsdialog.h"
@@ -39,6 +39,7 @@ public:
 
 signals:
     void plotData(CCDataSetPtr dataset, const QModelIndexList &col);
+    void plotCI(CCDataSetPtr dataset);
     void datasetInserted(CCDataSetPtr dataset);
 
 
@@ -62,6 +63,12 @@ private slots:
     void on_actionRemove_Dataset_triggered();
 
     void on_actionSingle_Component_Cosinor_triggered();
+
+    void on_actionRankit_triggered();
+
+    void on_actionPlot_Variances_triggered();
+
+    void on_actionPlot_Mesor_and_CI_triggered();
 
 private:
     static const QString        timeFormat;

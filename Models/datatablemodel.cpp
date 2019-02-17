@@ -57,6 +57,8 @@ QVariant DataTableModel::data(const QModelIndex &index, int role) const
     }
     else if(role == Qt::BackgroundRole)
         return (oob || !(dataset->begin() + add).value().used) ? QColor(UnusedColor) : dataset->getColor();
+    else if(role == Qt::ToolTipRole)
+        return dataset->getName();
     else if(role == UsedRole)
         return !oob && (dataset->begin() + add).value().used;
 
@@ -67,6 +69,11 @@ QVariant DataTableModel::data(const QModelIndex &index, int role) const
 QSharedPointer<CCDataSet> DataTableModel::getDataset(int column) const
 {
     return dataTable[column];
+}
+
+CCDataBase *DataTableModel::getDatabase() const
+{
+    return dataBase;
 }
 
 
@@ -101,13 +108,16 @@ bool DataTableModel::insertDataset(CCDataSetPtr dataset)
 }
 
 
-bool DataTableModel::removeDataset(int column)
+void DataTableModel::removeDataset(int id)
 {
-    beginRemoveColumns(QModelIndex(), column, column);
-    dataTable.remove(column);
-    endRemoveColumns();
+    for(int i = 0; i < dataTable.count(); i++)
+        if(dataTable[i]->getId() == id) {
+            beginRemoveColumns(QModelIndex(), i, i);
+            dataTable.remove(i);
+            endRemoveColumns();
 
-    return true;
+            emit datasetRemoved(i);
+        }
 }
 
 void DataTableModel::save(QDataStream &stream)

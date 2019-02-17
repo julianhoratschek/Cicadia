@@ -4,31 +4,30 @@
 
 using namespace Eigen;
 
+int Cosinor::runsTestRuns = 5;
+
 
 void Cosinor::init()
 {
     t.resize(getPack()->N);
     Y.resize(getPack()->N);
-std::cout.precision(std::numeric_limits<double>::digits10);
+
     int     i = 0;
     for(auto it = dataset->begin(); it != dataset->end(); it++) {
-        double      v = it.key();
         if(!it.value().used)
             continue;
         t(i) = it.key() / getPack()->tau;
-        std::cout << t(i) << ", ";
         Y(i++) = it.value().value;
     }
 }
 
 
-Cosinor::Cosinor(QSharedPointer<CCDataSet> &_dataset, double _timePeriod)
+Cosinor::Cosinor(const CCDataSetPtr &_dataset, double _timePeriod)
     : AlgorithmBase<CCDataPtr>(), dataset(_dataset)
 {
     data = new CosinorData();
 
     getPack()->tau = _timePeriod;
-    std::cout << getPack()->tau << std::endl;
     getPack()->N = dataset->size();
 
     init();
@@ -37,7 +36,7 @@ Cosinor::Cosinor(QSharedPointer<CCDataSet> &_dataset, double _timePeriod)
 }
 
 
-Cosinor::Cosinor(QSharedPointer<CCDataSet> &_cosinor, CCDataSetPtr &_parent, CosinorData *dt)
+Cosinor::Cosinor(CosinorData *dt, const CCDataSetPtr &_cosinor, const CCDataSetPtr &_parent)
     : AlgorithmBase<CCDataPtr>(), dataset(_parent)
 {
     data = dt;
@@ -63,6 +62,7 @@ void Cosinor::recalc(const double &alpha)
     acroPhaseCI(alpha);
     amplitudeCI(alpha);
     zeroAmplitude(alpha);
+    runsTest(alpha);
 }
 
 
@@ -74,6 +74,15 @@ CCDataPtr Cosinor::getData() const
     for(auto it = dataset->begin(); it != dataset->end(); it++)
         ret->insert(it.key(), Yest(i++));
     return ret;
+}
+
+void Cosinor::MesorCI(QSharedPointer<CCData<double>> &upper, QSharedPointer<CCData<double>> &lower)
+{
+    int i = 0;
+    for(auto it = dataset->begin(); it != dataset->end(); it++) {
+        upper->insert(it.key(), Yest(i) + getPack()->CI_M);
+        lower->insert(it.key(), Yest(i++) - getPack()->CI_M);
+    }
 }
 
 
@@ -134,8 +143,6 @@ std::cout.precision(std::numeric_limits<double>::digits10);
     x = t.unaryExpr([&](double val){ return std::cos(Cosinor::omega * val); });
     z = t.unaryExpr([&](double val){ return std::sin(Cosinor::omega * val); });
 
-    std::cout << x << std::endl;
-    std::cout << z << std::endl;
 
     double                      x_sum = x.sum(),
                                 z_sum = z.sum(),
@@ -219,4 +226,86 @@ void Cosinor::zeroAmplitude(const double &alpha)
 {
     getPack()->F = (getPack()->MSS/2) / (getPack()->RSS/(getPack()->N-3));
     getPack()->ZeroF = stats::qf<double, double>( 1 - alpha, 2, getPack()->N - 3);
+}
+
+/*
+ *  Are Variances random?
+ */
+// Cornelissen 2014
+void Cosinor::runsTest(const double &alpha)
+{
+    double                      med;
+    quint64                     n1, n2;
+    std::vector<double>         y(Yest.data(), Yest.data() + Yest.size());
+
+    std::sort(y.begin(), y.end());
+
+    if(Yest.size() % 2 != 0)
+        med = y[y.size() / 2];
+    else
+        med = 0.5 * (y[y.size() / 2] + y[y.size() / 2 + 1]);
+
+    for( n1 = 0; y[n1] < med; n1++);
+
+    n2 = y.size() - n1;
+
+    getPack()->R = ( runsTestRuns - ( ( 2 * n1 * n2 ) / y.size() + 1 ) ) / std::sqrt( ( 2 * n1 * n2 * ( 2 * n1 * n2 - y.size() ) ) / std::pow( y.size(), 2) * ( n1 + n2 - 1 ));
+    getPack()->RTest = stats::qnorm( 1 - alpha / 2, 0.0, 1.0);
+}
+
+/*
+ *  Test Normaldistribution for Variances
+ */
+// Cornelissen 2014
+CCDoubleDataPtr Cosinor::rankitPlot() const
+{
+    QVector<double>          e(getPack()->N), rankit(getPack()->N);
+
+    for(int i = 0; i < getPack()->N; i++) {
+        e[i] = Y(i) - Yest(i);
+        rankit[i] = stats::qnorm((i + 0.5) / getPack()->N);
+    }
+
+    std::sort(e.begin(), e.end());
+
+    CCDoubleDataPtr     ret(new CCData<double>("Rankit"));
+
+    for(int i = 0; i < getPack()->N; i++)
+        ret->insert(rankit[i], e[i]);
+
+    return ret;
+}
+
+/*
+ *  Are Variances about Equal?
+ */
+// Cornelissen 2014
+CCDoubleDataPtr Cosinor::variancePlot() const
+{
+    CCDoubleDataPtr        ret(new CCData<double>("Variances"));
+
+    for(int i = 0; i < getPack()->N; i++)
+        ret->insert(Y(i), Y(i) - Yest(i));
+
+    return ret;
+}
+
+/*
+ *  Is Least-Squares Regression the right kind of Analysis for this kind of Data?
+ */
+// Cornelissen 2014
+void Cosinor::modelAdequacy(const QVector<CCDataSetPtr> &compare, const double &alpha) const
+{
+    double       SSPE = getPack()->MSS + getPack()->RSS;
+    int             p = 1, k = compare.size();      // Single-Component Cosinor
+
+    for(int i = 0; i < k; i++) {
+       /* if(!compare[i]->isType(AlgorithmType::Cosinor))
+            continue;*/
+        CosinorData        *stats = static_cast<CosinorData*>(compare[i]->getStatistics());
+        SSPE += stats->MSS + stats->RSS;
+    }
+
+    /*getPack()->adequacy = ((getPack()->RSS - SSPE) / (k - 1 - 2 * p)) / (SSPE / (getPack()->N - k));
+    getPack()->adequacyTest = stats::qf<double, qint64>( 1 - alpha, k - 1 - 2 * p, getPack()->N - k );*/
 }

@@ -29,15 +29,20 @@ public:
 
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
     CCDataSetPtr getDataset(int column) const;
+    CCDataBase *getDatabase() const;
 
     // Add data:
     bool insertDataset(QSharedPointer<CCDataSet> dataset);
 
-    // Remove data:
-    bool removeDataset(int column);
 
     void save(QDataStream &stream);
     void load(QDataStream &stream);
+
+signals:
+    void datasetRemoved(int column);
+
+public slots:
+    void removeDataset(int id);
 
 private:
     CCDataBase                  *dataBase;

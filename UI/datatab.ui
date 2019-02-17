@@ -43,11 +43,6 @@
     <string>Change Color</string>
    </property>
   </action>
-  <action name="actionNew_Statistics_Row">
-   <property name="text">
-    <string>New Statistics Row</string>
-   </property>
-  </action>
   <action name="actionSingle_Component_Cosinor">
    <property name="text">
     <string>Single Component Cosinor</string>
@@ -78,11 +73,6 @@
     <string>Rankit</string>
    </property>
   </action>
-  <action name="actionRuns_Test">
-   <property name="text">
-    <string>Runs Test</string>
-   </property>
-  </action>
   <action name="actionHenning_Smooth">
    <property name="text">
     <string>Henning Smooth</string>
@@ -101,6 +91,11 @@
   <action name="actionRemove_Dataset">
    <property name="text">
     <string>Remove Dataset</string>
+   </property>
+  </action>
+  <action name="actionPlot_Variances">
+   <property name="text">
+    <string>Plot Variances</string>
    </property>
   </action>
  </widget>
