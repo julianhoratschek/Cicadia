@@ -13,23 +13,11 @@ SubjectsTreeModel::SubjectsTreeModel(QObject *parent, CCDataBase *_dataBase)
 
     auto            subjects = dataBase->selectSubjects();
 
-    for(auto subject: subjects) {
+    for(auto const &subject: subjects) {
         auto        datasets = dataBase->selectDatasets(subject.id);
 
-        for(auto dataset: datasets)
+        for(auto const &dataset: datasets)
             insertDataset(dataset);
-        /*auto        node = subject.isGroup ? groupsItem : subjectsItem,
-                    newNode = new SubjectsTreeItem(node);
-
-        newNode->dataset = datasets.first();
-        newNode->name = subject.name + ": " + datasets.first()->getSuffix();
-        node->children.append(newNode);
-
-        for(int i = 1; i < datasets.count(); i++) {
-            newNode->children.append(new SubjectsTreeItem(newNode));
-            newNode->children.last()->dataset = datasets[i];
-            newNode->children.last()->name = datasets[i]->getName();
-        }*/
     }
 }
 
@@ -39,7 +27,13 @@ SubjectsTreeModel::~SubjectsTreeModel()
 }
 
 
-QVariant SubjectsTreeModel::headerData(int section, Qt::Orientation, int role) const
+/**
+ * @brief SubjectsTreeModel::headerData
+ * @param section
+ * @param role
+ * @return
+ */
+QVariant SubjectsTreeModel::headerData(int section, Qt::Orientation, int) const
 {
     switch(section) {
     case NameColumn:
@@ -64,6 +58,13 @@ QVariant SubjectsTreeModel::headerData(int section, Qt::Orientation, int role) c
 }*/
 
 
+/**
+ * @brief SubjectsTreeModel::index
+ * @param row
+ * @param column
+ * @param parent
+ * @return
+ */
 QModelIndex SubjectsTreeModel::index(int row, int column, const QModelIndex &parent) const
 {
     SubjectsTreeItem        *ptr;
@@ -75,23 +76,33 @@ QModelIndex SubjectsTreeModel::index(int row, int column, const QModelIndex &par
 
     if(row < ptr->children.count())
         return createIndex(row, column, ptr->children[row]);
-    return QModelIndex();
+    return {};
 }
 
 
+/**
+ * @brief SubjectsTreeModel::parent
+ * @param index
+ * @return
+ */
 QModelIndex SubjectsTreeModel::parent(const QModelIndex &index) const
 {
     if(!index.isValid())
-        return QModelIndex();
+        return {};
 
     auto        ptr = static_cast<SubjectsTreeItem*>(index.internalPointer())->parent;
 
     if(ptr != root)
         return createIndex(ptr->parent->children.indexOf(ptr), 0, ptr);
-    return QModelIndex();
+    return {};
 }
 
 
+/**
+ * @brief SubjectsTreeModel::rowCount
+ * @param parent
+ * @return
+ */
 int SubjectsTreeModel::rowCount(const QModelIndex &parent) const
 {
     SubjectsTreeItem    *ptr;
@@ -104,12 +115,23 @@ int SubjectsTreeModel::rowCount(const QModelIndex &parent) const
 }
 
 
-int SubjectsTreeModel::columnCount(const QModelIndex &parent) const
+/**
+ * @brief SubjectsTreeModel::columnCount
+ * @param parent
+ * @return
+ */
+int SubjectsTreeModel::columnCount(const QModelIndex &) const
 {
     return SubjectsTreeModel_ColumnCount;
 }
 
 
+/**
+ * @brief SubjectsTreeModel::data
+ * @param index
+ * @param role
+ * @return
+ */
 QVariant SubjectsTreeModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid())
@@ -125,7 +147,7 @@ QVariant SubjectsTreeModel::data(const QModelIndex &index, int role) const
         case IDColumn:
             return ptr->dataset->getId();
         case TypeColumn:
-            return ptr->dataset->getType();
+            return static_cast<int>(ptr->dataset->getType());
         }
         break;
     case Qt::BackgroundRole:
@@ -137,6 +159,13 @@ QVariant SubjectsTreeModel::data(const QModelIndex &index, int role) const
 }
 
 
+/**
+ * @brief SubjectsTreeModel::setData
+ * @param index
+ * @param value
+ * @param role
+ * @return
+ */
 bool SubjectsTreeModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
     if (index.column() == NameColumn && data(index, role) != value && value != "") {
@@ -152,16 +181,25 @@ bool SubjectsTreeModel::setData(const QModelIndex &index, const QVariant &value,
 }
 
 
+/**
+ * @brief SubjectsTreeModel::flags
+ * @param index
+ * @return
+ */
 Qt::ItemFlags SubjectsTreeModel::flags(const QModelIndex &index) const
 {
     if (!index.isValid())
         return Qt::NoItemFlags;
 
-    return Qt::ItemIsEditable | QAbstractItemModel::flags(index); // FIXME: Implement me!
+    return Qt::ItemIsEditable | QAbstractItemModel::flags(index);
 }
 
 
-void SubjectsTreeModel::insertDataset(CCDataSetPtr newSet)
+/**
+ * @brief SubjectsTreeModel::insertDataset
+ * @param newSet
+ */
+void SubjectsTreeModel::insertDataset(CCDataSetPtr const &newSet)
 {
     SubjectsTreeItem        *parentItem;
     CCSubject               s = dataBase->selectSubject(newSet->getDataId());
@@ -181,6 +219,13 @@ void SubjectsTreeModel::insertDataset(CCDataSetPtr newSet)
 }
 
 
+/**
+ * @brief SubjectsTreeModel::removeRows
+ * @param row
+ * @param count
+ * @param parent
+ * @return
+ */
 bool SubjectsTreeModel::removeRows(int row, int count, const QModelIndex &parent)
 {
     auto        parentItem = static_cast<SubjectsTreeItem*>(parent.internalPointer());
@@ -195,6 +240,11 @@ bool SubjectsTreeModel::removeRows(int row, int count, const QModelIndex &parent
     return true;
 }
 
+
+/**
+ * @brief SubjectsTreeModel::deleteDataset
+ * @param deleteSet
+ */
 void SubjectsTreeModel::deleteDataset(const QSharedPointer<CCDataSet> &deleteSet)
 {
     auto                index = getModelIndex(dataBase->selectDataset(deleteSet->getId()), subjectsItem);
@@ -205,10 +255,16 @@ void SubjectsTreeModel::deleteDataset(const QSharedPointer<CCDataSet> &deleteSet
 }
 
 
+/**
+ * @brief SubjectsTreeModel::getModelIndex
+ * @param search
+ * @param ptr
+ * @return
+ */
 QModelIndex SubjectsTreeModel::getModelIndex(const CCDataSetPtr &search, SubjectsTreeItem *ptr) const
 {
     if(!search)
-        return QModelIndex();
+        return {};
 
     if(ptr->dataset && (ptr->dataset->getId() == search->getId()))
         return createIndex(ptr->parent->children.indexOf(ptr), 0, ptr);
@@ -219,5 +275,5 @@ QModelIndex SubjectsTreeModel::getModelIndex(const CCDataSetPtr &search, Subject
             return ret;
     }
 
-    return QModelIndex();
+    return {};
 }

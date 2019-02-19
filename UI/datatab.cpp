@@ -31,6 +31,10 @@ DataTab::~DataTab()
 }
 
 
+/**
+ * @brief DataTab::setDataTableModel
+ * @param model
+ */
 void DataTab::setDataTableModel(DataTableModel *model)
 {
     if(statisticsTableModel) {
@@ -53,13 +57,17 @@ void DataTab::setDataTableModel(DataTableModel *model)
 }
 
 
-void DataTab::addDataset(QSharedPointer<CCDataSet> dataset)
+/**
+ * @brief DataTab::addDataset
+ * @param dataset
+ */
+void DataTab::addDataset(QSharedPointer<CCDataSet> const &dataset)
 {
     if(dataset && dataTableModel) {
         dataTableModel->insertDataset(dataset);
-        if(dataset->isType(static_cast<CCDataSet::DataType>(AlgorithmType::Cosinor))) {
+        if(dataset->isType(static_cast<DataSetType>(AlgorithmType::Cosinor))) {
             if(!dataset->getStatistics()) {
-                CosinorData     *stats = new CosinorData();
+                auto     stats = new CosinorData();
                 stats->load(dataBase->selectStatistics(dataset->getId()));
                 Cosinor         c(stats, dataset, dataBase->selectDataset(dataset->getParentId()));
                 c.recalc(0.05);
@@ -71,6 +79,11 @@ void DataTab::addDataset(QSharedPointer<CCDataSet> dataset)
 }
 
 
+/**
+ * @brief DataTab::columnSelectionToDataset
+ * @param column
+ * @return
+ */
 QSharedPointer<CCDataSet> DataTab::columnSelectionToDataset(const QModelIndexList &column)
 {
     CCDataSetPtr            ret(new CCDataSet(*dataTableModel->getDataset(column.first().column())));
@@ -84,17 +97,33 @@ QSharedPointer<CCDataSet> DataTab::columnSelectionToDataset(const QModelIndexLis
 }
 
 
+/**
+ * @brief DataTab::save
+ * @param stream
+ */
 void DataTab::save(QDataStream &stream)
 {
-    stream << CCSerialization::CCSDataTab;
+    stream << CCSerialization::CCSDataTab;// << timeFormat;
+
+    options.save(stream);
 
     dataTableModel->save(stream);
     statisticsTableModel->save(stream);
 }
 
-quint32 DataTab::load(QDataStream &stream)
+
+/**
+ * @brief DataTab::load
+ * @param stream
+ * @return
+ */
+qint32 DataTab::load(QDataStream &stream)
 {
-    quint32     s;
+    qint32     s;
+
+    stream >> s;
+
+    options.load(stream);
 
     stream >> s;
     while(!stream.atEnd() && (s == CCSerialization::CCSDataTableModel || s == CCSerialization::CCSStatisticsTableModel)) {
@@ -109,6 +138,9 @@ quint32 DataTab::load(QDataStream &stream)
 }
 
 
+/**
+ * @brief DataTab::on_actionChange_Color_triggered
+ */
 void DataTab::on_actionChange_Color_triggered()
 {
     auto            dataset = dataTableModel->getDataset(currentColumn);
@@ -119,6 +151,10 @@ void DataTab::on_actionChange_Color_triggered()
 }
 
 
+/**
+ * @brief DataTab::on_dataTableView_customContextMenuRequested
+ * @param pos
+ */
 void DataTab::on_dataTableView_customContextMenuRequested(const QPoint &pos)
 {
     QMenu           contextMenu, *dataMenu, *plotMenu, *methodsMenu;
@@ -142,31 +178,18 @@ void DataTab::on_dataTableView_customContextMenuRequested(const QPoint &pos)
         plotMenu->addAction(ui->actionPlot_Variances);
     contextMenu.addAction(ui->actionShow_Options);
 
-    /*selectionMenu = contextMenu.addMenu("Selection");
-        selectionMenu->addAction(ui->actionColumnsToDataset);
-        selectionMenu->addAction(ui->actionPlotColumns);
-        statsMenu = selectionMenu->addMenu("Statistics");
-            statsMenu->addAction(ui->actionHanningSmooth);
-            statsMenu->addAction(ui->actionCosinor);
-            statsMenu->addAction(ui->actionCompare_Cosinor);
-            statsMenu->addAction(ui->actionShow_Statistics);
-            statsMenu->addAction(ui->actionShow_Histogramm);
-            statsMenu->addAction(ui->actionPlot_Rankit);
-            statsMenu->addAction(ui->actionVariance_Plot);
-    columnMenu = contextMenu.addMenu("Column");
-        columnMenu->addAction(ui->actionSetColumnColor);
-        columnMenu->addAction(ui->actionExport_CSV);*/
-
-
     contextMenu.exec(ui->dataTableView->mapToGlobal(pos));
 }
 
 
+/**
+ * @brief DataTab::on_actionCreate_Dataset_triggered
+ */
 void DataTab::on_actionCreate_Dataset_triggered()
 {
     auto            sorted = sortSelectedModelIndexesByColumns();
 
-    for(auto col: sorted) {
+    for(auto const &col: sorted) {
         auto            dataset = columnSelectionToDataset(col.values());
 
         if(dataTableModel->insertDataset(dataBase->insertDataset(dataset, dataset->getDataId())))
@@ -176,8 +199,12 @@ void DataTab::on_actionCreate_Dataset_triggered()
 
 
 /*
- *  Sorts the currently selected Indexes by Column
- *  Omits "null"-Values
+ *
+ */
+
+/**
+ * @brief DataTab::sortSelectedModelIndexesByColumns Sorts the currently selected Indexes by Column, omits "null"-Values
+ * @return
  */
 SortedModelIndexes DataTab::sortSelectedModelIndexesByColumns() const // OPTIMIZE?
 {
@@ -193,6 +220,10 @@ SortedModelIndexes DataTab::sortSelectedModelIndexesByColumns() const // OPTIMIZ
     return sorted;
 }
 
+
+/**
+ * @brief DataTab::on_actionPlot_Data_triggered
+ */
 void DataTab::on_actionPlot_Data_triggered()
 {
     auto            sorted = sortSelectedModelIndexesByColumns();
@@ -201,6 +232,10 @@ void DataTab::on_actionPlot_Data_triggered()
         emit plotData(dataTableModel->getDataset(col.first().column()), col.values());
 }
 
+
+/**
+ * @brief DataTab::on_actionExport_Data_triggered
+ */
 void DataTab::on_actionExport_Data_triggered()
 {
     QString         fileName = QFileDialog::getSaveFileName(this, "Export to CSV", ".", "*.csv");
@@ -211,13 +246,17 @@ void DataTab::on_actionExport_Data_triggered()
     fl.open(QIODevice::WriteOnly | QIODevice::Text);
 
     stream << "Time;Temp°C" << endl;
-    for(auto col: sorted)
+    for(auto const &col: sorted)
         for(auto row: col)
             stream << row.data(KeyRole).toLongLong() << ";" << row.data(Qt::DisplayRole).toDouble() << endl;
 
     fl.close();
 }
 
+
+/**
+ * @brief DataTab::on_actionShow_Options_triggered
+ */
 void DataTab::on_actionShow_Options_triggered()
 {
     OptionsDialog           diag(this, &options);
@@ -227,6 +266,10 @@ void DataTab::on_actionShow_Options_triggered()
     Cosinor::runsTestRuns = options.cosinorRunsTestRuns;
 }
 
+
+/**
+ * @brief DataTab::on_actionSplit_Days_triggered
+ */
 void DataTab::on_actionSplit_Days_triggered()
 {
     auto            sorted = sortSelectedModelIndexesByColumns();
@@ -246,6 +289,10 @@ void DataTab::on_actionSplit_Days_triggered()
     }
 }
 
+
+/**
+ * @brief DataTab::on_actionHistogram_triggered
+ */
 void DataTab::on_actionHistogram_triggered()
 {
     auto            sorted = sortSelectedModelIndexesByColumns();
@@ -257,23 +304,31 @@ void DataTab::on_actionHistogram_triggered()
     pd.exec();
 }
 
+
+/**
+ * @brief DataTab::on_actionRemove_Dataset_triggered
+ */
 void DataTab::on_actionRemove_Dataset_triggered()
 {
     dataTableModel->removeDataset(currentColumn);
 }
 
+
+/**
+ * @brief DataTab::on_actionSingle_Component_Cosinor_triggered
+ */
 void DataTab::on_actionSingle_Component_Cosinor_triggered()
 {
     auto            sorted = sortSelectedModelIndexesByColumns();
 
-    for(auto cols: sorted) {
+    for(auto const &cols: sorted) {
         CCDataSetPtr        dataset = columnSelectionToDataset(cols.values());
         Cosinor             c(dataset, options.cosinorTimePeriod);
 
         c.recalc(0.05);
 
         CCDataPtr           data = c.getData();
-        CCDataSetPtr        insert = dataBase->insertData(data, dataset->getParentId(), c.getName(), dataset->getColor(), CCDataSet::ProcessedData | AlgorithmType::Cosinor);
+        CCDataSetPtr        insert = dataBase->insertData(data, dataset->getParentId(), c.getName(), dataset->getColor(), DataSetType::ProcessedData | AlgorithmType::Cosinor);
 
         insert->setSuffix("Raw");
 
@@ -287,6 +342,10 @@ void DataTab::on_actionSingle_Component_Cosinor_triggered()
     }
 }
 
+
+/**
+ * @brief DataTab::on_actionRankit_triggered
+ */
 void DataTab::on_actionRankit_triggered()
 {
     CCDataSetPtr    dataset = dataTableModel->getDataset(currentColumn),
@@ -295,12 +354,12 @@ void DataTab::on_actionRankit_triggered()
     if(!parentset->getData())
         parentset->setData(dataBase->selectData(parentset->getDataId()));
 
-    if(!dataset->isType(static_cast<CCDataSet::DataType>(AlgorithmType::SingleComponentCosinor))) {
+    if(!dataset->isType(static_cast<DataSetType>(AlgorithmType::SingleComponentCosinor))) {
         QMessageBox::warning(this, "Error", "Column must be of Type 'Cosinor'");
         return;
     }
 
-    Cosinor         c(static_cast<CosinorData*>(dataset->getStatistics()), dataset, parentset);
+    Cosinor         c(dynamic_cast<CosinorData*>(dataset->getStatistics()), dataset, parentset);
     PlotDialog      pd(this, c.rankitPlot());
 
     parentset.clear();
@@ -308,6 +367,10 @@ void DataTab::on_actionRankit_triggered()
     pd.exec();
 }
 
+
+/**
+ * @brief DataTab::on_actionPlot_Variances_triggered
+ */
 void DataTab::on_actionPlot_Variances_triggered()
 {
     CCDataSetPtr        dataset = dataTableModel->getDataset(currentColumn),
@@ -316,12 +379,12 @@ void DataTab::on_actionPlot_Variances_triggered()
     if(!parentset->getData())
         parentset->setData(dataBase->selectData(parentset->getDataId()));
 
-    if(!dataset->isType(static_cast<CCDataSet::DataType>(AlgorithmType::SingleComponentCosinor))) {
+    if(!dataset->isType(static_cast<DataSetType>(AlgorithmType::SingleComponentCosinor))) {
         QMessageBox::warning(this, "Error", "Column must be of Type 'Cosinor'");
         return;
     }
 
-    Cosinor         c(static_cast<CosinorData*>(dataset->getStatistics()), dataset, parentset);
+    Cosinor         c(dynamic_cast<CosinorData*>(dataset->getStatistics()), dataset, parentset);
     PlotDialog      pd(this, c.variancePlot());
 
     parentset.clear();
@@ -329,6 +392,10 @@ void DataTab::on_actionPlot_Variances_triggered()
     pd.exec();
 }
 
+
+/**
+ * @brief DataTab::on_actionPlot_Mesor_and_CI_triggered
+ */
 void DataTab::on_actionPlot_Mesor_and_CI_triggered()
 {
     emit plotCI(dataTableModel->getDataset(currentColumn));

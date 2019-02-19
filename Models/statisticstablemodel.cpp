@@ -5,6 +5,14 @@ StatisticsTableModel::StatisticsTableModel(QObject *parent, DataTableModel *_dat
 {
 }
 
+
+/**
+ * @brief StatisticsTableModel::headerData
+ * @param section
+ * @param orientation
+ * @param role
+ * @return
+ */
 QVariant StatisticsTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if(role == Qt::DisplayRole && orientation == Qt::Horizontal) {
@@ -22,6 +30,11 @@ QVariant StatisticsTableModel::headerData(int section, Qt::Orientation orientati
 }
 
 
+/**
+ * @brief StatisticsTableModel::rowCount
+ * @param parent
+ * @return
+ */
 int StatisticsTableModel::rowCount(const QModelIndex &parent) const
 {
     if (parent.isValid())
@@ -31,6 +44,11 @@ int StatisticsTableModel::rowCount(const QModelIndex &parent) const
 }
 
 
+/**
+ * @brief StatisticsTableModel::columnCount
+ * @param parent
+ * @return
+ */
 int StatisticsTableModel::columnCount(const QModelIndex &parent) const
 {
     if (parent.isValid())
@@ -40,6 +58,12 @@ int StatisticsTableModel::columnCount(const QModelIndex &parent) const
 }
 
 
+/**
+ * @brief StatisticsTableModel::data
+ * @param index
+ * @param role
+ * @return
+ */
 QVariant StatisticsTableModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid())
@@ -56,7 +80,7 @@ QVariant StatisticsTableModel::data(const QModelIndex &index, int role) const
         case DataColumn:
             QString         s = "";
             QTextStream     out(&s);
-            QStringList     l = dataTable->getDataset(items[index.row()].dataTableColumn)->getStatistics()->toString();
+            QStringList     l = dataTable->getDataset(items[index.row()].dataTableColumn)->getStatistics()->toStringList();
 
             for(int i=0;i<l.length();i+=2) {
                 out << qSetFieldWidth(25) << left << "\n" + l[i] << left << l[i+1];
@@ -72,13 +96,20 @@ QVariant StatisticsTableModel::data(const QModelIndex &index, int role) const
 }
 
 
-bool StatisticsTableModel::setData(const QModelIndex &index, const QVariant &value, int role)
+/**
+ * @brief StatisticsTableModel::setData
+ * @param index
+ * @param value
+ * @param role
+ * @return
+ */
+bool StatisticsTableModel::setData(const QModelIndex &index, const QVariant &value, int)
 {
     if(index.column() != AlphaColumn)
         return false;
 
     CCDataSetPtr    dataset = dataTable->getDataset(items[index.row()].dataTableColumn);
-    Cosinor         c(static_cast<CosinorData*>(dataset->getStatistics()),
+    Cosinor         c(dynamic_cast<CosinorData*>(dataset->getStatistics()),
                       dataset, dataTable->getDatabase()->selectDataset(dataset->getParentId()));
 
     items[index.row()].alpha = value.toString().toDouble();
@@ -90,6 +121,12 @@ bool StatisticsTableModel::setData(const QModelIndex &index, const QVariant &val
 }
 
 
+/**
+ * @brief StatisticsTableModel::addItem
+ * @param dataTableColumn
+ * @param type
+ * @return
+ */
 bool StatisticsTableModel::addItem(int dataTableColumn, AlgorithmType type)
 {
     beginInsertRows(QModelIndex(), items.count(), items.count());
@@ -106,7 +143,13 @@ bool StatisticsTableModel::addItem(int dataTableColumn, AlgorithmType type)
 }
 
 
-bool StatisticsTableModel::removeRows(int row, int count, const QModelIndex &parent)
+/**
+ * @brief StatisticsTableModel::removeRows
+ * @param row
+ * @param count
+ * @return
+ */
+bool StatisticsTableModel::removeRows(int row, int count, const QModelIndex &)
 {
     beginRemoveRows(QModelIndex(), row, row + count - 1);
     items.remove(row);
@@ -115,6 +158,12 @@ bool StatisticsTableModel::removeRows(int row, int count, const QModelIndex &par
     return true;
 }
 
+
+/**
+ * @brief StatisticsTableModel::flags
+ * @param index
+ * @return
+ */
 Qt::ItemFlags StatisticsTableModel::flags(const QModelIndex &index) const
 {
     if(index.column() == AlphaColumn)
@@ -122,36 +171,59 @@ Qt::ItemFlags StatisticsTableModel::flags(const QModelIndex &index) const
     return QAbstractTableModel::flags(index);
 }
 
+
+/**
+ * @brief StatisticsTableModel::save
+ * @param stream
+ */
 void StatisticsTableModel::save(QDataStream &stream)
 {
-    stream << CCSerialization::CCSStatisticsTableModel;
-    stream << (quint32)items.count();
+    stream << CCSerialization::CCSStatisticsTableModel << items.count();
 
-    for(auto it: items)
+    for(auto const &it: items) {
         it.save(stream);
+        stream << dataTable->getDataset(it.dataTableColumn)->getStatistics()->save();
+    }
 }
 
-quint32 StatisticsTableModel::load(QDataStream &stream)
+
+/**
+ * @brief StatisticsTableModel::load
+ * @param stream
+ * @return
+ */
+qint32 StatisticsTableModel::load(QDataStream &stream)
 {
-    quint32             sz, tp;
+    qint32             sz, tp;
 
     items.clear();
 
     stream >> sz;
 
-    for(quint32 i = 0; i < sz; i++) {
+    for(qint32 i = 0; i < sz; i++) {
         StatisticsTableItem it;
+        QString             ld;
+        CosinorData         dt;
 
         stream >> tp;
         if(tp != CCSerialization::CCSStatisticsTableItem)
             return tp;
         it.load(stream);
         items << it;
+
+        stream >> ld;
+        dt.load(ld);
+        dataTable->getDataset(it.dataTableColumn)->setStatistics(new CosinorData(dt));
     }
 
     return 0;
 }
 
+
+/**
+ * @brief StatisticsTableModel::removeDataset
+ * @param column
+ */
 void StatisticsTableModel::removeDataset(int column)
 {
     int     r = -1;
@@ -168,20 +240,28 @@ void StatisticsTableModel::removeDataset(int column)
 }
 
 
-
+/**
+ * @brief StatisticsTableItem::save
+ * @param stream
+ */
 void StatisticsTableItem::save(QDataStream &stream) const
 {
     stream << CCSerialization::CCSStatisticsTableItem;
-    stream << dataTableColumn << alpha << (quint32)type;
+    stream << static_cast<qint32>(dataTableColumn) << alpha << static_cast<qint32>(type);
 }
 
+
+/**
+ * @brief StatisticsTableItem::load
+ * @param stream
+ */
 void StatisticsTableItem::load(QDataStream &stream)
 {
-    quint32         tp;
+    qint32         tp;
 
-    stream >> dataTableColumn;
+    stream >> tp;
+    dataTableColumn = tp;
     stream >> alpha;
     stream >> tp;
-
     type = static_cast<AlgorithmType>(tp);
 }

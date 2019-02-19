@@ -1,9 +1,14 @@
 #ifndef ALGORITHMBASE_H
 #define ALGORITHMBASE_H
 
+#include <QString>
 #include <QStringList>
 
-enum class AlgorithmType {
+/**
+ * @brief The AlgorithmType enum describes the Algorithm used and can be used to
+ * determine to which class a AlgorithmBase-Pointer shall be casted
+ */
+enum class AlgorithmType : qint64 {
     SingleComponentCosinor = 1,
     MultipleComponentCosinor = 1 << 1,
     PopulationCosinor = 1 << 2,
@@ -13,33 +18,44 @@ enum class AlgorithmType {
     HenningSmoothed = 1 << 5
 };
 
+
+/**
+ * @brief The AlgorithmData struct holds statistical Information about a current Algorithm Class.
+ * It is not mandatory for a Class to function.
+ */
 struct AlgorithmData
 {
+    // Public Members
+
     double      mean;
 
-    AlgorithmData() :
-        mean(0) {}
-    AlgorithmData(const AlgorithmData &other) :
-        mean(other.mean) {}
+    // Public Methods
+
+    AlgorithmData() : mean(0) {}
+    AlgorithmData(const AlgorithmData &other) : mean(other.mean) {}
     virtual ~AlgorithmData() {}
 
-    virtual void load(const QString &s) = 0;
-    virtual QString save() const = 0;
+    virtual void            load(const QString &s) = 0;
+    virtual QString         save() const = 0;
 
-    virtual QStringList toString() const {
-        return {"Mean: ", QString::number(mean)};
-    }
+    virtual QStringList     toStringList() const { return {"Mean: ", QString::number(mean)}; }
 };
 
+
+/**
+ *  @brief The AlgorithmBase template class is used as a Base for all Data-manipulation Classes.
+ * <DataPtr> should be either double or qint64.
+ */
 template<typename DataPtr>
 class AlgorithmBase
 {
 public:
-    AlgorithmBase(AlgorithmType _type = AlgorithmType::SingleComponentCosinor)
-        : type(_type), data(nullptr) {}
+
+    // Public Methods
+
+    AlgorithmBase(AlgorithmType _type = AlgorithmType::SingleComponentCosinor) : type(_type), data(nullptr) {}
     virtual ~AlgorithmBase() {}
 
-    virtual DataPtr         getData() const = 0;
     AlgorithmType           getType() { return type; }
     QString                 getName() {
         switch(type) {
@@ -60,21 +76,37 @@ public:
         return "Algorithm";
     }
 
+    // Virtual Public Methods
+
+    virtual DataPtr         getData() const = 0;
+
 protected:
-    AlgorithmData               *data;
+    /**
+     * @brief data holds a Pointer to the Statistics-relevant derived Pointer to a child-Class of AlgorithmData
+     */
+    AlgorithmData           *data;
 
 private:
-    AlgorithmType               type;
+
+    /**
+     * @brief type Holds the Type of the current Child-Class of AlgorithmBase
+     */
+    AlgorithmType           type;
 
 };
 
-enum CCSerialization {
+
+/**
+ * @brief The CCSerialization enum is relevant for Storing and serializing Data.
+ */
+enum CCSerialization : qint32 {
     CCSMagicNumber = 0xC1CAD1A,
-    CCSVersion = 1,
+    CCSVersion = 2,
     CCSStatisticsTableItem,
     CCSStatisticsTableModel,
     CCSDataTableModel,
-    CCSDataTab
+    CCSDataTab,
+    CCSDataTabOptions
 };
 
 #endif // ALGORITHMBASE_H

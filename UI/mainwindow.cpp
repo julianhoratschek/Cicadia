@@ -7,6 +7,10 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    ui->statusBar->addWidget(new QLabel("Version 1.0.0-alpha", this));
+
+    setWindowTitle("Cicadia [cicadia]");
+
     dataBase = new CCDataBase();
 
     subjectsTreeModel = new SubjectsTreeModel(this, dataBase);
@@ -53,6 +57,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->customPlot, &QCustomPlot::mouseWheel, this, &MainWindow::oncustomPlot_MouseWheel);
     connect(ui->customPlot, &QCustomPlot::mousePress, this, &MainWindow::oncustomPlot_MousePress);
+
+    QMessageBox::warning(this, "Warning", "This is an unstable Alpha-Version, not yet intended for public use. Use with Care.");
 }
 
 
@@ -63,8 +69,10 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-/*
- *      Adds new DataTab to TabView
+
+/**
+ * @brief MainWindow::insertDataTab Adds new DataTab to TabView
+ * @param index
  */
 void MainWindow::insertDataTab(int index) {
     auto                *tab = new DataTab(this, dataBase);
@@ -77,20 +85,15 @@ void MainWindow::insertDataTab(int index) {
     connect(tab, &DataTab::plotCI, this, &MainWindow::plotCI);
     connect(tab, &DataTab::datasetInserted, subjectsTreeModel, &SubjectsTreeModel::insertDataset);
     connect(subjectsTreeModel, &SubjectsTreeModel::removedDataset, model, &DataTableModel::removeDataset);
-
-
-    /*connect(tab, &DataTab::dataSetInserted, this, &MainWindow::ondataTab_dataSetInserted);
-
-
-    connect(tab, &QCDDataTab::plotMesor, this, &MainWindow::ondataTab_plotMesor);
-    connect(tab, &QCDDataTab::plotHistogramm, this, &MainWindow::ondataTab_plotHistogramm);
-    connect(tab, &QCDDataTab::plotRankit, this, &MainWindow::ondataTab_plotRankit);
-    connect(tab, &QCDDataTab::plotVariance, this, &MainWindow::ondataTab_plotVariance);
-
-    connect(tab, &QCDDataTab::columnColorChanged, this, &MainWindow::ondataTab_columnColorChanged);*/
 }
 
-void MainWindow::plotData(CCDataSetPtr dataset, const QModelIndexList &list)
+
+/**
+ * @brief MainWindow::plotData
+ * @param dataset
+ * @param list
+ */
+void MainWindow::plotData(CCDataSetPtr const &dataset, const QModelIndexList &list)
 {
     QPen                    pen;
     QVector<double>         keys, values;
@@ -120,16 +123,21 @@ void MainWindow::plotData(CCDataSetPtr dataset, const QModelIndexList &list)
     ui->customPlot->replot();
 }
 
+
+/**
+ * @brief MainWindow::plotCI
+ * @param dataset
+ */
 void MainWindow::plotCI(const QSharedPointer<CCDataSet> &dataset)
 {
     CCDataSetPtr        parentset = dataBase->selectDataset(dataset->getParentId());
 
-    if(!dataset->isType(static_cast<CCDataSet::DataType>(AlgorithmType::SingleComponentCosinor))) {
+    if(!dataset->isType(static_cast<DataSetType>(AlgorithmType::SingleComponentCosinor))) {
         QMessageBox::warning(this, "Error", "Column must be of Type 'Cosinor'");
         return;
     }
 
-    Cosinor             c(static_cast<CosinorData*>(dataset->getStatistics()), dataset, parentset);
+    Cosinor             c(dynamic_cast<CosinorData*>(dataset->getStatistics()), dataset, parentset);
     CCDoubleDataPtr     upper, lower;
 
     c.MesorCI(upper, lower);
@@ -166,6 +174,11 @@ void MainWindow::plotCI(const QSharedPointer<CCDataSet> &dataset)
     ui->customPlot->replot();
 }
 
+
+/**
+ * @brief MainWindow::keyPressEvent
+ * @param event
+ */
 void MainWindow::keyPressEvent(QKeyEvent *event)
 {
     switch(event->key()) {
@@ -178,8 +191,8 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
                 dt.setTime(QTime::fromMSecsSinceStartOfDay(0));
 
                 dataBase->hideData(graphRelations[graph],
-                                   dt.toSecsSinceEpoch() + begin,
-                                   dt.toSecsSinceEpoch() + end);
+                                   static_cast<qint64>(dt.toSecsSinceEpoch() + begin),
+                                   static_cast<qint64>(dt.toSecsSinceEpoch() + end));
                 graph->data()->remove(begin, end);
             }
         }
@@ -191,8 +204,9 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
 }
 
 
-/*
- *  Prohibit moving the "+"-Button Tab or add new Datasets
+/**
+ * @brief MainWindow::on_tabWidget_tabBarClicked Prohibit moving the "+"-Button Tab or add new Datasets
+ * @param index
  */
 void MainWindow::on_tabWidget_tabBarClicked(int index)
 {
@@ -206,8 +220,9 @@ void MainWindow::on_tabWidget_tabBarClicked(int index)
         ui->tabWidget->setMovable(true);
 }
 
-/*
- *  Prohibit moving other Tabs past the "+"-Button Tab
+
+/**
+ * @brief MainWindow::ontabBar_tabMoved Prohibit moving other Tabs past the "+"-Button Tab
  */
 void MainWindow::ontabBar_tabMoved(int, int)
 {
@@ -216,9 +231,9 @@ void MainWindow::ontabBar_tabMoved(int, int)
 }
 
 
-/*
- *  Closing the "+"-Tab is not allowed, if the last Tab except for it is closed,
- *  another DataTab will be inserted
+/**
+ * @brief MainWindow::on_tabWidget_tabCloseRequested Closing the "+"-Tab is not allowed, if the last Tab except for it is closed, another DataTab will be inserted
+ * @param index
  */
 void MainWindow::on_tabWidget_tabCloseRequested(int index)
 {
@@ -239,6 +254,10 @@ void MainWindow::on_tabWidget_tabCloseRequested(int index)
 }
 
 
+/**
+ * @brief MainWindow::on_subjectsTreeView_doubleClicked
+ * @param index
+ */
 void MainWindow::on_subjectsTreeView_doubleClicked(const QModelIndex &index)
 {
     auto            ptr = static_cast<SubjectsTreeItem*>(index.internalPointer());
@@ -246,8 +265,10 @@ void MainWindow::on_subjectsTreeView_doubleClicked(const QModelIndex &index)
     qobject_cast<DataTab*>(ui->tabWidget->currentWidget())->addDataset(ptr->dataset);
 }
 
-/*
- *  On holding [SHIFT] one can zoom on Y-Axis, otherwise on X-Axis
+
+/**
+ * @brief MainWindow::oncustomPlot_MouseWheel On holding [SHIFT] one can zoom on Y-Axis, otherwise on X-Axis
+ * @param event
  */
 void MainWindow::oncustomPlot_MouseWheel(QWheelEvent *event)
 {
@@ -258,8 +279,9 @@ void MainWindow::oncustomPlot_MouseWheel(QWheelEvent *event)
 }
 
 
-/*
- *  Holding [SHIFT] enables Selection-Mode
+/**
+ * @brief MainWindow::oncustomPlot_MousePress Holding [SHIFT] enables Selection-Mode
+ * @param event
  */
 void MainWindow::oncustomPlot_MousePress(QMouseEvent *event)
 {
@@ -272,11 +294,14 @@ void MainWindow::oncustomPlot_MousePress(QMouseEvent *event)
 }
 
 
+/**
+ * @brief MainWindow::on_actionImport_triggered
+ */
 void MainWindow::on_actionImport_triggered()
 {
     QStringList         fileNames = QFileDialog::getOpenFileNames(this, "Import Files", ".", "*.csv");
 
-    for(auto s: fileNames) {
+    for(auto const &s: fileNames) {
         auto        dataset = dataBase->importFromFile(s);
         if(!dataset)
             QMessageBox::warning(this, "Error", "Could not load File " + s);
@@ -286,11 +311,18 @@ void MainWindow::on_actionImport_triggered()
 }
 
 
+/**
+ * @brief MainWindow::on_actionExit_triggered
+ */
 void MainWindow::on_actionExit_triggered()
 {
     close();
 }
 
+
+/**
+ * @brief MainWindow::on_actionExport_Graph_triggered
+ */
 void MainWindow::on_actionExport_Graph_triggered()
 {
     QSvgGenerator       gen;
@@ -306,6 +338,10 @@ void MainWindow::on_actionExport_Graph_triggered()
     QMessageBox::information(this, "Success", "Plot was saved");
 }
 
+
+/**
+ * @brief MainWindow::on_actionClear_Graph_triggered
+ */
 void MainWindow::on_actionClear_Graph_triggered()
 {
     graphRelations.clear();
@@ -313,33 +349,60 @@ void MainWindow::on_actionClear_Graph_triggered()
     ui->customPlot->replot();
 }
 
+
+/**
+ * @brief MainWindow::on_actionSave_triggered
+ */
 void MainWindow::on_actionSave_triggered()
 {
     QString     fileName = QFileDialog::getSaveFileName(this, "Save to", ".", "*.db");
-    quint32     s = CCSerialization::CCSMagicNumber, v = CCSerialization::CCSVersion;
 
-    dataBase->save(fileName);
+    if(fileName == "")
+        return;
+
+    if(!dataBase->save(fileName)) {
+        QMessageBox::warning(this, "Error", "Could not save File");
+        return;
+    }
 
     QFile       fl(fileName + ".dt");
     fl.open(QIODevice::WriteOnly);
     QDataStream stream(&fl);
 
-    stream << s << v << (quint32)ui->tabWidget->count();
-    for(int i = 0; i < ui->tabWidget->count(); i++)
+    stream << CCSerialization::CCSMagicNumber << CCSerialization::CCSVersion << static_cast<qint32>(ui->tabWidget->count());
+    for(int i = 0; i < ui->tabWidget->count()-1; i++)
         qobject_cast<DataTab*>(ui->tabWidget->widget(i))->save(stream);
 
     fl.close();
+
+    setWindowTitle("Cicadia[" + QFileInfo(fileName).baseName() + "]");
 }
 
+
+/**
+ * @brief MainWindow::on_actionOpen_triggered
+ */
 void MainWindow::on_actionOpen_triggered()
 {
     QString     fileName = QFileDialog::getOpenFileName(this, "Open File", ".", "*.db");
-    quint32     s, v;
+    qint32      s, v;
 
-    dataBase->load(fileName);
+    if(fileName == "")
+        return;
+
+    if(!dataBase->load(fileName)) {
+        QMessageBox::warning(this, "Error", "Could not load File");
+        return;
+    }
+
+    SubjectsTreeModel   *m = dynamic_cast<SubjectsTreeModel*>(ui->subjectsTreeView->model());
+    subjectsTreeModel = new SubjectsTreeModel(this, dataBase);
+    ui->subjectsTreeView->setModel(subjectsTreeModel);
+    delete m;
 
     QFile       fl(fileName + ".dt");
     fl.open(QIODevice::ReadOnly);
+
     QDataStream stream(&fl);
 
     stream >> s;
@@ -350,17 +413,29 @@ void MainWindow::on_actionOpen_triggered()
         return;
     }
 
+    ui->tabWidget->clear();
+
+    // Get Count of DataTabs
+
     stream >> s;
 
-    for(quint64 i = 0; i < s; i++) {
-        insertDataTab(ui->tabWidget->count() - 1);
-        stream >> v;
-        qobject_cast<DataTab*>(ui->tabWidget->widget(ui->tabWidget->count() - 1))->load(stream);
+    for(qint32 i = 0; i < s-1; i++) {
+        insertDataTab(ui->tabWidget->count());
+        qobject_cast<DataTab*>(ui->tabWidget->widget(ui->tabWidget->count()-1))->load(stream);
     }
 
+    ui->tabWidget->insertTab(ui->tabWidget->count(), new QWidget(this), "+");
+
     fl.close();
+
+    setWindowTitle("Cicadia[" + QFileInfo(fileName).baseName() + "]");
 }
 
+
+/**
+ * @brief MainWindow::on_subjectsTreeView_customContextMenuRequested
+ * @param pos
+ */
 void MainWindow::on_subjectsTreeView_customContextMenuRequested(const QPoint &pos)
 {
     QMenu           contextMenu;
@@ -375,6 +450,10 @@ void MainWindow::on_subjectsTreeView_customContextMenuRequested(const QPoint &po
     contextMenu.exec(ui->subjectsTreeView->mapToGlobal(pos));
 }
 
+
+/**
+ * @brief MainWindow::on_actionDelete_Dataset_triggered
+ */
 void MainWindow::on_actionDelete_Dataset_triggered()
 {
     if(QMessageBox::question(this, "Delete Dataset", "Delete " + currentDataset->getName() + " and all its Children?") == QMessageBox::Yes)

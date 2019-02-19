@@ -18,6 +18,11 @@ OptionsDialog::~OptionsDialog()
     delete ui;
 }
 
+
+/**
+ * @brief OptionsDialog::on_optionsTableWidget_itemChanged
+ * @param item
+ */
 void OptionsDialog::on_optionsTableWidget_itemChanged(QTableWidgetItem *item)
 {
     switch(item->row()) {

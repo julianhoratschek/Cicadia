@@ -34,10 +34,15 @@ PlotDialog::PlotDialog(QWidget *parent) :
     ui->customPlot->legend->setVisible(false);
 
     connect(ui->customPlot, &QCustomPlot::mouseWheel, this, &PlotDialog::oncustomPlot_MouseWheel);
-    connect(ui->customPlot, &QCustomPlot::mousePress, this, &PlotDialog::oncustomPlot_MousePress);
+    //connect(ui->customPlot, &QCustomPlot::mousePress, this, &PlotDialog::oncustomPlot_MousePress);
 }
 
 
+/**
+ * @brief PlotDialog::PlotDialog
+ * @param parent
+ * @param h
+ */
 PlotDialog::PlotDialog(QWidget *parent, const Histogram &h)
     : PlotDialog(parent)
 {
@@ -52,6 +57,12 @@ PlotDialog::PlotDialog(QWidget *parent, const Histogram &h)
     ui->customPlot->rescaleAxes();
 }
 
+
+/**
+ * @brief PlotDialog::PlotDialog
+ * @param parent
+ * @param data
+ */
 PlotDialog::PlotDialog(QWidget *parent, const CCDoubleDataPtr &data)
     : PlotDialog(parent)
 {
@@ -65,14 +76,19 @@ PlotDialog::PlotDialog(QWidget *parent, const CCDoubleDataPtr &data)
     ui->customPlot->replot();
 }
 
+
+/**
+ * @brief PlotDialog::~PlotDialog
+ */
 PlotDialog::~PlotDialog()
 {
     delete ui;
 }
 
 
-/*
- *  On holding [SHIFT] one can zoom on Y-Axis, otherwise on X-Axis
+/**
+ * @brief PlotDialog::oncustomPlot_MouseWheel On holding [SHIFT] one can zoom on Y-Axis, otherwise on X-Axis
+ * @param event
  */
 void PlotDialog::oncustomPlot_MouseWheel(QWheelEvent *event)
 {
@@ -83,24 +99,18 @@ void PlotDialog::oncustomPlot_MouseWheel(QWheelEvent *event)
 }
 
 
-/*
- *  Holding [SHIFT] enables Selection-Mode
+/**
+ * @brief PlotDialog::on_closePushButton_clicked
  */
-void PlotDialog::oncustomPlot_MousePress(QMouseEvent *event)
-{
-    /*if((event->buttons() & Qt::LeftButton) == Qt::LeftButton) {
-        if((event->modifiers() & Qt::ShiftModifier) == Qt::ShiftModifier)
-            ui->customPlot->setSelectionRectMode(QCP::srmSelect);
-        else
-            ui->customPlot->setSelectionRectMode(QCP::srmNone);
-    }*/
-}
-
 void PlotDialog::on_closePushButton_clicked()
 {
     close();
 }
 
+
+/**
+ * @brief PlotDialog::on_savePushButton_clicked
+ */
 void PlotDialog::on_savePushButton_clicked()
 {
     QSvgGenerator       gen;

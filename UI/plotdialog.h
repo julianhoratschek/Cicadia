@@ -12,6 +12,10 @@ namespace Ui {
 class PlotDialog;
 }
 
+
+/**
+ * @brief The PlotDialog class
+ */
 class PlotDialog : public QDialog
 {
     Q_OBJECT
@@ -19,11 +23,12 @@ class PlotDialog : public QDialog
 public:
     explicit PlotDialog(QWidget *parent = nullptr);
     explicit PlotDialog(QWidget *parent, const Histogram &h);
+    explicit PlotDialog(QWidget *parent, const CCDoubleDataPtr &data);
     ~PlotDialog();
 
-    PlotDialog(QWidget *parent, const CCDoubleDataPtr &data);
+
+
 public slots:
-    void oncustomPlot_MousePress(QMouseEvent *event);
     void oncustomPlot_MouseWheel(QWheelEvent *event);
 
 private slots:

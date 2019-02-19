@@ -1,12 +1,13 @@
 #include "cosinor.h"
 
-#include <iostream>
-
 using namespace Eigen;
 
 int Cosinor::runsTestRuns = 5;
 
 
+/**
+ * @brief Cosinor::init
+ */
 void Cosinor::init()
 {
     t.resize(getPack()->N);
@@ -22,8 +23,12 @@ void Cosinor::init()
 }
 
 
-Cosinor::Cosinor(const CCDataSetPtr &_dataset, double _timePeriod)
-    : AlgorithmBase<CCDataPtr>(), dataset(_dataset)
+/**
+ * @brief Cosinor::Cosinor
+ * @param _dataset
+ * @param _timePeriod
+ */
+Cosinor::Cosinor(const CCDataSetPtr &_dataset, double _timePeriod) : beta(0), gamma(0), dataset(_dataset)
 {
     data = new CosinorData();
 
@@ -36,8 +41,13 @@ Cosinor::Cosinor(const CCDataSetPtr &_dataset, double _timePeriod)
 }
 
 
-Cosinor::Cosinor(CosinorData *dt, const CCDataSetPtr &_cosinor, const CCDataSetPtr &_parent)
-    : AlgorithmBase<CCDataPtr>(), dataset(_parent)
+/**
+ * @brief Cosinor::Cosinor
+ * @param dt
+ * @param _cosinor
+ * @param _parent
+ */
+Cosinor::Cosinor(CosinorData *dt, const CCDataSetPtr &_cosinor, const CCDataSetPtr &_parent) : dataset(_parent)
 {
     data = dt;
 
@@ -56,6 +66,10 @@ Cosinor::Cosinor(CosinorData *dt, const CCDataSetPtr &_cosinor, const CCDataSetP
 }
 
 
+/**
+ * @brief Cosinor::recalc
+ * @param alpha
+ */
 void Cosinor::recalc(const double &alpha)
 {
     mesorCI(alpha);
@@ -66,6 +80,10 @@ void Cosinor::recalc(const double &alpha)
 }
 
 
+/**
+ * @brief Cosinor::getData
+ * @return
+ */
 CCDataPtr Cosinor::getData() const
 {
     CCDataPtr       ret(new CCData<qint64>("SCC [T=" + QString::number(getPack()->tau) + "]" + dataset->getData()->name + dataset->getSuffix()));
@@ -76,6 +94,12 @@ CCDataPtr Cosinor::getData() const
     return ret;
 }
 
+
+/**
+ * @brief Cosinor::MesorCI
+ * @param upper
+ * @param lower
+ */
 void Cosinor::MesorCI(QSharedPointer<CCData<double>> &upper, QSharedPointer<CCData<double>> &lower)
 {
     int i = 0;
@@ -86,10 +110,10 @@ void Cosinor::MesorCI(QSharedPointer<CCData<double>> &upper, QSharedPointer<CCDa
 }
 
 
-/*
- *  Set phi to the correct quadrant according to Signs of alpha and beta
+/**
+ * @brief Cosinor::correctPhi Set phi to the correct quadrant according to Signs of alpha and beta
+ * Bingham et al. 1997
  */
-// Bingham et al. 1997
 void Cosinor::correctPhi()
 {
     getPack()->phi = std::atan( std::abs( gamma / beta ) );
@@ -109,19 +133,21 @@ void Cosinor::correctPhi()
 }
 
 
+/**
+ * @brief Cosinor::estimateCurve
+ */
 void Cosinor::estimateCurve()
 {
     Yest.resize(getPack()->N);
     for(int i = 0; i < getPack()->N; i++)
-        //Yest(i) = M + mbeta * x(i) + mgamma * z(i);
         Yest(i) = getPack()->M + getPack()->A * std::cos(omega * t(i) * getPack()->phi);
 }
 
 
-/*
- *  Sum of Squares for Regression Analysis
+/**
+ * @brief Cosinor::sumOfSquares Sum of Squares for Regression Analysis
+ * Cornelissen 2014
  */
-// Cornelissen 2014
 void Cosinor::sumOfSquares()
 {
     getPack()->MSS = (Yest - Y.mean()).square().sum();
@@ -130,16 +156,16 @@ void Cosinor::sumOfSquares()
 }
 
 
-/*
- *  Calculation of Cosinor-Function. WIll be called by Constructor
+/**
+ * @brief Cosinor::calc Calculation of Cosinor-Function. WIll be called by Constructor
+ * Cornelissen 2014
  */
-// Cornelissen 2014
 void Cosinor::calc()
 {
     Vector3d            d, u;
     ArrayXd             x, z;
     Matrix3d            S;
-std::cout.precision(std::numeric_limits<double>::digits10);
+
     x = t.unaryExpr([&](double val){ return std::cos(Cosinor::omega * val); });
     z = t.unaryExpr([&](double val){ return std::sin(Cosinor::omega * val); });
 
@@ -148,8 +174,6 @@ std::cout.precision(std::numeric_limits<double>::digits10);
                                 z_sum = z.sum(),
                                 xz_sum = x.cwiseProduct(z).sum();
 
-    std::cout << x_sum << z_sum << xz_sum << std::endl;
-
     S <<    getPack()->N,          x_sum,                      z_sum,
             x_sum,      x.square().sum(),           xz_sum,
             z_sum,      xz_sum,                     z.square().sum();
@@ -157,8 +181,6 @@ std::cout.precision(std::numeric_limits<double>::digits10);
     d <<    Y.sum(),
             Y.cwiseProduct(x).sum(),
             Y.cwiseProduct(z).sum();
-
-    std::cout << S << d << std::endl;
 
     u = S.colPivHouseholderQr().solve(d);
 
@@ -177,10 +199,12 @@ std::cout.precision(std::numeric_limits<double>::digits10);
     getPack()->Sinv = S.inverse();
 }
 
-/*
- *  Helper-Functions for a Multitude of Confidence-interval Calculations etc.
+
+/**
+ * @brief Cosinor::c22, c23, c33 Helper-Functions for a Multitude of Confidence-interval Calculations etc.
+ * @return
+ * According to Bingham et al. 1997
  */
-// According to Bingham et al. 1997
 double Cosinor::c22() const
 {
     return getPack()->Sinv(1, 1) * std::pow( std::cos( getPack()->phi ), 2 ) - 2 * getPack()->Sinv(1, 2) * std::cos( getPack()->phi ) * std::sin( getPack()->phi ) + getPack()->Sinv(2,2) * std::pow( std::sin( getPack()->phi ), 2 );
@@ -199,12 +223,20 @@ double Cosinor::c33() const
 }
 
 
+/**
+ * @brief Cosinor::mesorCI
+ * @param alpha
+ */
 void Cosinor::mesorCI(const double &alpha)
 {
     getPack()->CI_M = stats::qt(1-alpha/2, getPack()->N - 3) * sigma() * std::sqrt(getPack()->Sinv(0, 0));
 }
 
 
+/**
+ * @brief Cosinor::acroPhaseCI
+ * @param alpha
+ */
 void Cosinor::acroPhaseCI(const double &alpha)
 {
     double          t = stats::qt( 1 - alpha / 2, getPack()->N - 3 );
@@ -216,22 +248,32 @@ void Cosinor::acroPhaseCI(const double &alpha)
 }
 
 
+/**
+ * @brief Cosinor::amplitudeCI
+ * @param alpha
+ */
 void Cosinor::amplitudeCI(const double &alpha)
 {
     getPack()->CI_A = sigma() * std::sqrt( c22() ) * stats::qt(1 - alpha / 2, getPack()->N - 3);
 }
 
 
+/**
+ * @brief Cosinor::zeroAmplitude
+ * @param alpha
+ */
 void Cosinor::zeroAmplitude(const double &alpha)
 {
     getPack()->F = (getPack()->MSS/2) / (getPack()->RSS/(getPack()->N-3));
     getPack()->ZeroF = stats::qf<double, double>( 1 - alpha, 2, getPack()->N - 3);
 }
 
-/*
- *  Are Variances random?
+
+/**
+ * @brief Cosinor::runsTest Are Variances random?
+ * @param alpha
+ * Cornelissen 2014
  */
-// Cornelissen 2014
 void Cosinor::runsTest(const double &alpha)
 {
     double                      med;
@@ -253,10 +295,12 @@ void Cosinor::runsTest(const double &alpha)
     getPack()->RTest = stats::qnorm( 1 - alpha / 2, 0.0, 1.0);
 }
 
-/*
- *  Test Normaldistribution for Variances
+
+/**
+ * @brief Cosinor::rankitPlot Test Normaldistribution for Variances
+ * @return
+ * Cornelissen 2014
  */
-// Cornelissen 2014
 CCDoubleDataPtr Cosinor::rankitPlot() const
 {
     QVector<double>          e(getPack()->N), rankit(getPack()->N);
@@ -276,10 +320,12 @@ CCDoubleDataPtr Cosinor::rankitPlot() const
     return ret;
 }
 
-/*
- *  Are Variances about Equal?
+
+/**
+ * @brief Cosinor::variancePlot Are Variances about Equal?
+ * @return
+ * Cornelissen 2014
  */
-// Cornelissen 2014
 CCDoubleDataPtr Cosinor::variancePlot() const
 {
     CCDoubleDataPtr        ret(new CCData<double>("Variances"));
@@ -290,10 +336,13 @@ CCDoubleDataPtr Cosinor::variancePlot() const
     return ret;
 }
 
-/*
- *  Is Least-Squares Regression the right kind of Analysis for this kind of Data?
+
+/**
+ * @brief Cosinor::modelAdequacy Is Least-Squares Regression the right kind of Analysis for this kind of Data?
+ * @param compare
+ * @param alpha
+ * Cornelissen 2014
  */
-// Cornelissen 2014
 void Cosinor::modelAdequacy(const QVector<CCDataSetPtr> &compare, const double &alpha) const
 {
     double       SSPE = getPack()->MSS + getPack()->RSS;
@@ -302,7 +351,7 @@ void Cosinor::modelAdequacy(const QVector<CCDataSetPtr> &compare, const double &
     for(int i = 0; i < k; i++) {
        /* if(!compare[i]->isType(AlgorithmType::Cosinor))
             continue;*/
-        CosinorData        *stats = static_cast<CosinorData*>(compare[i]->getStatistics());
+        auto        stats = dynamic_cast<CosinorData*>(compare[i]->getStatistics());
         SSPE += stats->MSS + stats->RSS;
     }
 

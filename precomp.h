@@ -1,48 +1,42 @@
-/*#ifndef PRECOMP_H
-#define PRECOMP_H*/
+#include <QSharedPointer>
+#include <QVariant>
 
-#include    <QVector>
-#include    <QMap>
+#include <QVector>
+#include <QMap>
 
-#include    <QString>
-#include    <QColor>
+#include <QString>
+#include <QStringList>
 
-#include    <QSharedPointer>
 
 #include <QDataStream>
 #include <QTextStream>
+
+#include <QColor>
+#include <QPen>
 
 #include <QAbstractTableModel>
 #include <QAbstractItemModel>
 
 #include <QWidget>
+#include <QLabel>
 #include <QMenu>
-
-#include <QFileDialog>
-#include <QColorDialog>
 
 #include <QMainWindow>
 #include <QFileDialog>
+#include <QColorDialog>
 #include <QMessageBox>
-#include <QSvgGenerator>
 
-#include <QPen>
+#include <QSvgGenerator>
 
 #include "UI/qcustomplot.h"
 
 #include <QSqlDatabase>
 #include <QSqlQuery>
 
-#include <QVariant>
-
 #include <QDir>
 #include <QFileInfo>
 
 #include <QDateTime>
 
-/*#include <../include/Eigen/Core>
-#include <../include/Eigen/LU>
-#include <../include/Eigen/QR>*/
 #include <../include/StatsLib/include/stats.hpp>
 
-//#endif // PRECOMP_H

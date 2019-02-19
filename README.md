@@ -15,9 +15,16 @@ Unfortunately, there are no Mirrors (yet) to download fully functioning Versions
 ### Setup Folder Structure
 
 * **Setup Qt**: Qt is well documented, you probably won't have Trouble finding step-by-step Instructions on setting it up on your specific System.
-* **Setup QCustomPlot**: Download and unpack *QCustomPlot*. You will only need the Files *qcustomplot.cpp* and *qcustomplot.h*. Copy both Files into *Cicadia/UI/*.
-* **Setup Eigen**: Download and unpack *Eigen Library*. Copy the Folder "eigen-eigen-versionnumber/Eigen" into *Cidacia/include*
-* **Setup StatsLib**: Download and unpack *StatsLib*. Rename the Folder "stats" to "StatsLib" and save it under *Cicadia/include*
+* **Setup QCustomPlot**:
+    * Download and unpack *QCustomPlot*.
+    * You will only need the Files *qcustomplot.cpp* and *qcustomplot.h*. Copy both Files into *Cicadia/UI/*.
+* **Setup Eigen**:
+    * Download and unpack *Eigen Library*.
+    * Copy the Folder "eigen-eigen-versionnumber/Eigen" into *Cicadia/include*
+* **Setup StatsLib**:
+    * Download and unpack *StatsLib*.
+    * Rename the Folder "stats" to "StatsLib"
+    * Save it in *Cicadia/include*
 
 The final Structure of the *Cicadia*-Folder prior to Compiling should look like (Files not shown):
 
@@ -49,7 +56,7 @@ Load *Cicadia/Cicadia.pro* with a Qt-Building Environment, e.g. QtCreator and co
 * [Qt 5.12](https://www.qt.io/download) - Used as Base Framework for GUI
 * [QCustomPlot 2.0.1](https://www.qcustomplot.com/index.php/download) - Qt-based Plotting-Library
 * [Eigen 3.3.7](http://eigen.tuxfamily.org/index.php?title=Main_Page) - Matrix (and Vector) processing Library
-* [StatLib 2.2.0](https://github.com/kthohr/stats) - Statistics Library
+* [StatsLib 2.2.0](https://github.com/kthohr/stats) - Statistics Library
 
 
 ## Versioning
